@@ -41,7 +41,9 @@ Anyone who clones the repo gets an AI agent that already understands the codebas
 
 ---
 
-### For teams — share skills across every project from one place
+### For teams — a central knowledge base every AI agent can draw from
+
+Your team's architecture decisions, conventions, runbooks, and pitfalls live in one git repo. Every project connects to it. Every AI agent on every machine stays in sync.
 
 ```bash
 # One-time: point lorex at your team's skill registry (a git repo you own)
