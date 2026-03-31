@@ -151,7 +151,7 @@ Because the projections are derived from the canonical skill store, your agents 
 
 ## 🤝 Contributing
 
-Lorex is a high-performance CLI built with **.NET 10** and **Native AOT**.
+Lorex is still a young project, and contributions are welcome if you want to help improve the tool, its integrations, or the overall developer experience.
 
 ```bash
 git clone https://github.com/alirezanet/lorex
