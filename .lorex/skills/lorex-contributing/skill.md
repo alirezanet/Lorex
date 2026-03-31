@@ -41,7 +41,6 @@ lorex/
 │   │   │   ├── IAdapter.cs
 │   │   │   ├── CopilotAdapter.cs       ← .github/skills/
 │   │   │   ├── CodexAdapter.cs         ← .agents/skills/
-│   │   │   ├── OpenClawAdapter.cs      ← skills/
 │   │   │   ├── CursorAdapter.cs        ← .cursor/rules/
 │   │   │   ├── ClaudeAdapter.cs        ← .claude/skills/
 │   │   │   ├── WindsurfAdapter.cs      ← .windsurf/skills/

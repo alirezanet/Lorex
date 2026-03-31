@@ -45,6 +45,7 @@ Running `lorex install` with no skill names opens an interactive flow where user
 |---|---|
 | `copilot` | `.github/skills/` |
 | `codex` | `.agents/skills/` |
+| `openclaw` | `skills/` |
 | `cursor` | `.cursor/rules/` |
 | `claude` | `.claude/skills/` |
 | `windsurf` | `.windsurf/skills/` |
