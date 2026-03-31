@@ -67,6 +67,6 @@ public sealed class CommandArgumentTests
     {
         var defaults = InitCommand.GetDefaultAdapters([]);
 
-        Assert.Equal(["copilot", "codex"], defaults);
+        Assert.Equal(["copilot", "codex", "claude"], defaults);
     }
 }
