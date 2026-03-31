@@ -38,7 +38,7 @@ Choose the method that fits your workflow:
 Install Lorex as a global tool using the .NET 10 SDK:
 
 ```bash
-dotnet tool install -g lorex
+dotnet tool install -g lorex --version v0.0.1-beta.3
 ```
 
 #### **For Everyone Else (Standalone Binary)**
