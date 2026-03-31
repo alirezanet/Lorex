@@ -52,7 +52,7 @@ curl -fsSL https://raw.githubusercontent.com/alirezanet/lorex/main/scripts/insta
 Install Lorex as a global tool using the .NET 10 SDK:
 
 ```bash
-dotnet tool install -g lorex --version v0.0.1-beta.3
+dotnet tool install -g lorex --prerelease
 ```
 
 #### **Manual Download (Fallback)**
@@ -173,7 +173,7 @@ Lorex is still a young project, and contributions are welcome if you want to hel
 ```bash
 git clone https://github.com/alirezanet/lorex
 cd lorex
-dotnet install.cs # Builds and installs the dev version
+dotnet ./install.cs # Builds and installs the dev version
 ```
 
 **This repo dogfoods Lorex.** Once cloned, your AI agent can read the `lorex-contributing` skill to learn the internal architecture and contribution workflow automatically\!
