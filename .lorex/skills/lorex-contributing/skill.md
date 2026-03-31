@@ -16,6 +16,8 @@ Lorex is a .NET 10 Native AOT CLI that stores canonical skills in `.lorex/skills
 - symlink-only projection into native agent paths
 - compatibility with legacy `skill.md` files while scaffolding new `SKILL.md` files
 
+Lorex is a cross-platform tool. Changes in commands, filesystem behavior, tests, and docs should support Windows, Linux, and macOS unless there is a clearly documented platform-specific constraint.
+
 ## Repository layout
 
 ```text
@@ -167,6 +169,7 @@ If you change any of these areas, update the docs and skills so agents stay accu
 ## Pitfalls
 
 - `Spectre.Console` markup uses `[tag]`; escape literal brackets as `[[`.
+- Do not hard-code Windows-only or Unix-only path expectations in tests; use `Path.Combine`, `Path.GetFullPath`, and platform-neutral assertions.
 - Do not regress the symlink-only behavior when editing projection code.
 - Native skill-folder projections are considered Lorex-managed only when the target entry is a symlink into `.lorex/skills`.
 - Keep `src/Lorex/Resources/lorex.md` and `.lorex/skills/lorex/SKILL.md` identical.
