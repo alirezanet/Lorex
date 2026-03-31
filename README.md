@@ -10,7 +10,16 @@
 
 -----
 
-## ⚡ Why Lorex?
+## ℹ️ Who Needs Lorex?
+
+- People using multiple AI agents and want one reusable skill source.
+- Teams who want to share AI-ready project knowledge without rewriting it for every person or every tool.
+- Developers who want project-specific skills to be easy for others to install and use.
+- People who have strong AI sessions but find it hard to turn that knowledge into a reusable skill.
+
+-----
+
+### ⚡ Why Lorex?
   * **Works with every agent:** Add a skill once. Lorex projects a synchronized link to your all AI agent tools.
   * **Shared Intelligence:** Build a central "Team Registry" (any Git repo) to share standards (e.g., `security-rules`, `api-conventions`) across your entire organization.
   * **Native AOT:** Fast CLI, No runtime, no VM, no bulky dependencies.
