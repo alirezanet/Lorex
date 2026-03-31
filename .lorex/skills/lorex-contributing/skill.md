@@ -8,10 +8,216 @@ owner: lorex
 
 # lorex-contributing
 
-This skill is for any AI agent (or human) working **on** the lorex codebase itself — fixing bugs, adding features, or reviewing architecture. The companion `lorex` skill covers how to _use_ lorex.
+> **You are an AI agent reading this skill.** Use it to help contributors understand the lorex codebase, answer architecture questions, implement changes correctly, and know which files to update after any change.
 
-> **IMPORTANT — Keep skill files in sync.**
-> Whenever you make changes to lorex, you are responsible for updating the relevant skill files. See the [Skill File Update Checklist](#skill-file-update-checklist) at the bottom of this file.
+This skill covers working **on** lorex itself. For using lorex to manage skills in other projects, see the `lorex` skill.
+
+---
+
+## What Is Lorex (For Contributors)
+
+Lorex is a **native AOT CLI tool** written in C#/.NET 10 — a single self-contained binary with no runtime dependency. It packages engineering knowledge as versioned markdown "skills" and injects a skill index into AI agent config files so agents arrive informed.
+
+- **Language / framework:** C# / .NET 10 (`net10.0`)
+- **Key dependency:** `Spectre.Console` (core only — no `.Cli` package; dispatch is manual)
+- **Distribution:** `PackAsTool=true` (dotnet global tool) + native AOT binaries per platform
+- **Status:** Early beta (v0.0.x stabilisation)
+- **Repo:** https://github.com/alirezanet/lorex
+
+---
+
+## When a User Asks You to Help With the Codebase
+
+**"Where is X implemented?"** → use the Repository Layout and Architecture sections below to orient yourself, then read the relevant file.
+
+**"How do I add a new adapter?"** → see [Adding a New Adapter](#adding-a-new-adapter).
+
+**"How do I add a new command?"** → see [Adding a New Command](#adding-a-new-command).
+
+**"What files do I need to update after this change?"** → see [Skill File Update Checklist](#skill-file-update-checklist).
+
+**"How do I build / run / test?"** → see [Build & Run](#build--run).
+
+**"Why isn't my change working?"** → see [Pitfalls](#pitfalls).
+
+---
+
+## Repository Layout
+
+```
+lorex/
+├── src/Lorex/
+│   ├── Program.cs                      ← entry point; manual switch dispatch on args[0]
+│   ├── Lorex.csproj
+│   ├── Commands/                       ← one static class per CLI command
+│   │   ├── InitCommand.cs              ← lorex init
+│   │   ├── InstallCommand.cs           ← lorex install
+│   │   ├── UninstallCommand.cs         ← lorex uninstall
+│   │   ├── ListCommand.cs              ← lorex list
+│   │   ├── StatusCommand.cs            ← lorex status
+│   │   ├── SyncCommand.cs              ← lorex sync
+│   │   ├── CreateCommand.cs            ← lorex create (scaffold + register + refresh)
+│   │   ├── PublishCommand.cs           ← lorex publish
+│   │   ├── RefreshCommand.cs           ← lorex refresh
+│   │   └── ServiceFactory.cs           ← lazy singleton service locator
+│   ├── Core/
+│   │   ├── Adapters/                   ← one file per supported AI tool
+│   │   │   ├── IAdapter.cs             ← Key, ConfigFile, InjectIndex, RemoveIndex, IsPresent
+│   │   │   ├── CopilotAdapter.cs       ← .github/copilot-instructions.md
+│   │   │   ├── CodexAdapter.cs         ← AGENTS.md
+│   │   │   ├── OpenClawAdapter.cs      ← AGENTS.md
+│   │   │   ├── CursorAdapter.cs        ← .cursorrules
+│   │   │   ├── ClaudeAdapter.cs        ← CLAUDE.md
+│   │   │   ├── WindsurfAdapter.cs      ← .windsurfrules
+│   │   │   ├── ClineAdapter.cs         ← .clinerules
+│   │   │   ├── RooAdapter.cs           ← .roorules
+│   │   │   ├── GeminiAdapter.cs        ← GEMINI.md
+│   │   │   └── OpenCodeAdapter.cs      ← opencode.md
+│   │   ├── Services/
+│   │   │   ├── AdapterService.cs       ← KnownAdapters dict; Compile (injects index); auto-detect
+│   │   │   ├── SkillService.cs         ← install / uninstall / sync / scaffold / publish
+│   │   │   ├── BuiltInSkillService.cs  ← reads EmbeddedResources; InstallAll on lorex init
+│   │   │   ├── RegistryService.cs      ← git clone/pull to ~/.lorex/cache/<slug>/
+│   │   │   ├── GitService.cs           ← thin Process wrapper around git
+│   │   │   └── WindowsDevModeHelper.cs ← symlink availability check + guidance
+│   │   ├── Models/
+│   │   │   ├── LorexConfig.cs          ← project config (registry?, adapters[], installedSkills[])
+│   │   │   ├── GlobalConfig.cs         ← user-level config (~/.lorex/config.json)
+│   │   │   └── SkillMetadata.cs        ← parsed YAML frontmatter (name, description, version…)
+│   │   └── Serialization/
+│   │       ├── LorexJsonContext.cs     ← AOT-safe source-gen JSON context
+│   │       └── SimpleYamlParser.cs     ← handwritten frontmatter parser (no external deps)
+│   └── Resources/
+│       └── lorex.md                    ← EmbeddedResource; auto-installed on lorex init
+├── tests/Lorex.Tests/                  ← xUnit unit tests
+├── .lorex/skills/
+│   ├── lorex/                          ← built-in skill (auto-managed; gitignored)
+│   └── lorex-contributing/             ← this file (committed to repo)
+├── .github/workflows/
+│   ├── ci.yml                          ← build + test on every push/PR
+│   └── release.yml                     ← AOT binaries + nupkg + NuGet publish on v* tag
+├── install.cs                          ← dev installer (dotnet C# script)
+└── lorex.slnx
+```
+
+---
+
+## Architecture
+
+### CLI Dispatch
+`Program.cs` uses a `switch(args[0])` to route to static `Run(string[] rest)` methods. No command framework. Help text and argument parsing are handwritten per command.
+
+### Services
+`ServiceFactory` is a lazy singleton locator. Commands call `ServiceFactory.Skills`, `ServiceFactory.Registry`, `ServiceFactory.Adapters`, etc. All services are constructed once per process.
+
+### Adapters
+Each adapter implements `IAdapter`:
+- `Key` — the string used in `lorex init` (e.g. `"copilot"`)
+- `TargetFilePath(projectRoot)` — full path to the config file written
+- `InjectIndex(projectRoot, index)` — writes/updates the `<!-- lorex:start -->…<!-- lorex:end -->` block
+- `RemoveIndex(projectRoot)` — strips the block
+- `DetectExisting(projectRoot)` — returns true if config file is already present (used for auto-select on init)
+
+All adapters are registered in `AdapterService.KnownAdapters` (`Dictionary<string, IAdapter>`). `AdapterService.Compile(projectRoot, config)` calls `InjectIndex` on every enabled adapter.
+
+### Skill Lifecycle
+| Type | Location | Symlink? | Publishable? |
+|---|---|---|---|
+| Registry skill | `~/.lorex/cache/<slug>/skills/<name>/` → symlink at `.lorex/skills/<name>` | Yes (copy fallback on Windows without Dev Mode) | Already in registry |
+| Local skill | `.lorex/skills/<name>/` (real directory) | No | Yes via `lorex publish` |
+| Built-in skill | Embedded in binary → extracted to `.lorex/skills/<name>/` on init | No | No (blocked by guard) |
+
+`SkillService.LocalOnlySkills()` returns real directories excluding built-ins — the candidates for `lorex publish`.
+
+### Config Model
+```json
+{ "registry": "https://…", "adapters": ["copilot", "codex"], "installedSkills": ["lorex", "my-skill"] }
+```
+- `registry` is `string?` — null = local-only mode
+- Skills must be in `installedSkills` to appear in the injected index
+- `lorex create` / `SkillService.ScaffoldSkill` adds the name automatically
+
+### Skill Index Injection Format
+```
+<!-- lorex:start -->
+## Lorex Skill Index
+- **skill-name**: description → `.lorex/skills/skill-name/skill.md`
+<!-- lorex:end -->
+```
+Each adapter writes this block into its own config file.
+
+---
+
+## Build & Run
+
+```bash
+dotnet build                                                # build
+dotnet run --project src/Lorex -- <args>                   # run from source
+dotnet run install.cs                                       # build -dev nupkg + install as global tool
+dotnet test                                                 # run unit tests
+
+# Native AOT (must run on the matching platform)
+dotnet publish src/Lorex /p:PublishProfile=win-x64   -c Release
+dotnet publish src/Lorex /p:PublishProfile=linux-x64 -c Release
+dotnet publish src/Lorex /p:PublishProfile=osx-arm64 -c Release
+```
+
+`install.cs` uninstalls the existing global tool before reinstalling — this works around `dotnet tool update` being a no-op when the version hasn't changed.
+
+### CI / Release
+- **CI** (`ci.yml`) — triggers on push/PR to master: restore → build → test
+- **Release** (`release.yml`) — triggers on `v*` tag: test → 6× native AOT builds (parallel) → pack nupkg → create draft GitHub release → push to NuGet
+- Version comes from the tag (`v0.1.0` → `0.1.0`), not the csproj
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0   # triggers full release pipeline
+```
+
+---
+
+## Adding a New Adapter
+
+1. Create `src/Lorex/Core/Adapters/<Name>Adapter.cs` implementing `IAdapter`
+2. Register in `AdapterService.KnownAdapters`
+3. ✏️ `src/Lorex/Resources/lorex.md` — add row to Supported Adapters table
+4. ✏️ `.lorex/skills/lorex-contributing/skill.md` — update adapter list in repo layout
+5. ✏️ `README.md` — Works With Every Major AI Tool table
+
+## Adding a New Command
+
+1. Create `src/Lorex/Commands/<Name>Command.cs` with `public static int Run(string[] args)`
+2. Add case to `switch` in `Program.cs`
+3. Add row to `PrintHelp()` grid in `Program.cs`
+4. ✏️ `src/Lorex/Resources/lorex.md` — All Commands table + any agent workflow guidance
+5. ✏️ `README.md` — All Commands section
+
+---
+
+## Skill File Update Checklist
+
+After any change, update the relevant files so agents reading only skill files get accurate information:
+
+| Changed area | Files to update |
+|---|---|
+| New / changed CLI command | `src/Lorex/Resources/lorex.md`, `README.md` |
+| New / changed adapter | `lorex.md`, `lorex-contributing/skill.md`, `README.md` |
+| Skill format / frontmatter | `lorex.md`, `README.md` |
+| Build, install, or release workflow | `lorex-contributing/skill.md`, `README.md` |
+| Architecture / project structure | `lorex-contributing/skill.md` |
+
+> **Rule:** `src/Lorex/Resources/lorex.md` is the embedded binary copy. After editing it, rebuild with `dotnet run install.cs` so the installed tool carries the updated skill.
+
+---
+
+## Pitfalls
+
+- **Spectre.Console markup:** `[tag]` is parsed as markup. Escape literal brackets as `[[`. Any dynamic content rendered inside markup must go through `Markup.Escape()`.
+- **AOT compatibility:** no `dynamic`, no `Reflection.Emit`, no runtime-discovered types. Add new model types to `LorexJsonContext` for AOT-safe JSON serialisation.
+- **Null registry:** `LorexConfig.Registry` is `string?`. Commands that need a registry (`install`, `list`, `sync`, `publish`) must guard for null and print a helpful message — see existing commands for the pattern.
+- **`git ls-remote -- <url>`** validates a registry URL against empty repos. Do not use `--exit-code` or `--heads` — they behave differently across git versions.
+- **`install.cs` version:** the script reads the version from the csproj and appends `-dev`. Since the csproj no longer has a hardcoded version, it defaults to `0.0.0-dev`. This is intentional for local dev.
+- **Built-in skill sync:** `src/Lorex/Resources/lorex.md` (binary source) must be kept manually in sync with the agent-facing knowledge. There is no automation for this — it's your responsibility on every relevant change.
+
 
 ---
 
