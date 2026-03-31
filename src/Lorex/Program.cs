@@ -43,7 +43,7 @@ catch (Exception ex)
     return 1;
 }
 
-static int PrintVersion()
+static string GetVersion()
 {
     var version = typeof(Program).Assembly
         .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
@@ -51,7 +51,12 @@ static int PrintVersion()
     // Strip any build metadata suffix (e.g. +commit hash)
     var plus = version.IndexOf('+');
     if (plus >= 0) version = version[..plus];
-    AnsiConsole.WriteLine(version);
+    return version;
+}
+
+static int PrintVersion()
+{
+    AnsiConsole.WriteLine(GetVersion());
     return 0;
 }
 
@@ -78,7 +83,7 @@ static int PrintHelp()
 
     AnsiConsole.WriteLine();
     AnsiConsole.Write(new FigletText("lorex").Color(Color.Blue));
-    AnsiConsole.MarkupLine("[dim]v0.0.1 — Teach your AI agents once. Reuse everywhere.[/]");
+    AnsiConsole.MarkupLine($"[dim]v{GetVersion()} — Teach your AI agents once. Reuse everywhere.[/]");
     AnsiConsole.WriteLine();
     AnsiConsole.MarkupLine("[bold]USAGE[/]  lorex [dim]<command>[/] [dim][[args]][/]");
     AnsiConsole.WriteLine();
