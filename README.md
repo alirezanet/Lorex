@@ -1,4 +1,4 @@
-# lorex
+# LoreX
 
 ### The Shared Knowledge Registry for AI Agents and People.
 
