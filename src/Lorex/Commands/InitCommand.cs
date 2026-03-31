@@ -148,6 +148,37 @@ public static class InitCommand
         // ── Project built-in skills into native agent surfaces ────────────────
         ServiceFactory.Adapters.Project(projectRoot, config);
 
+        if (!nonInteractive && registryUrl is not null)
+        {
+            var recommendedToInstall = FindRecommendedSkills(projectRoot, config);
+            if (recommendedToInstall.Count > 0)
+            {
+                var installRecommended = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title($"[bold]Install recommended registry skills for this project?[/] [dim]({string.Join(", ", recommendedToInstall)})[/]")
+                        .AddChoices("Yes", "No"));
+
+                if (string.Equals(installRecommended, "Yes", StringComparison.Ordinal))
+                {
+                    AnsiConsole.Status()
+                        .Start("Installing recommended skills...", ctx =>
+                        {
+                            foreach (var skillName in recommendedToInstall)
+                            {
+                                ctx.Spinner(Spinner.Known.Dots);
+                                ctx.Status($"Installing [bold]{skillName}[/]...");
+                                ServiceFactory.Skills.InstallSkill(projectRoot, skillName);
+                            }
+
+                            ctx.Status("Projecting skills into native agent locations...");
+                            var updatedConfig = ServiceFactory.Skills.ReadConfig(projectRoot);
+                            ServiceFactory.Adapters.Project(projectRoot, updatedConfig);
+                            config = updatedConfig;
+                        });
+                }
+            }
+        }
+
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("[green]✓[/] lorex initialised. Native agent projections updated:");
         foreach (var name in selectedAdapters)
@@ -319,5 +350,23 @@ public static class InitCommand
         var detectionText = detected ? "[green](detected)[/]" : "[dim](not detected)[/]";
         return $"[bold]{Markup.Escape(adapterName)}[/] {detectionText} [dim]- {targetText}[/]";
     }
-}
 
+    private static List<string> FindRecommendedSkills(string projectRoot, LorexConfig config)
+    {
+        if (config.Registry is null)
+            return [];
+
+        IReadOnlyList<SkillMetadata> available = [];
+        AnsiConsole.Status()
+            .Start("Checking for recommended skills...", ctx =>
+            {
+                ctx.Spinner(Spinner.Known.Dots);
+                available = ServiceFactory.Registry.ListAvailableSkills(config.Registry.Url);
+            });
+
+        return InstallCommand.GetRecommendedSkillNames(
+            available,
+            config,
+            InstallCommand.GetProjectTagKeys(projectRoot, ServiceFactory.Git));
+    }
+}

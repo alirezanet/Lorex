@@ -181,6 +181,19 @@ public sealed class GitService
     public void WorktreeRemove(string repoPath, string worktreePath) =>
         Run(repoPath, "worktree", "remove", "--force", worktreePath);
 
+    public string? TryGetProjectSlug(string repoPath)
+    {
+        try
+        {
+            var remoteUrl = Run(repoPath, "remote", "get-url", "origin").Trim();
+            return ParseRepositorySlug(remoteUrl);
+        }
+        catch (GitException)
+        {
+            return null;
+        }
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private string? GetRemoteDefaultBranchViaSymref(string repoPath, string remote)
@@ -229,6 +242,44 @@ public sealed class GitService
             .Where(line => !string.IsNullOrWhiteSpace(line))
             .Distinct(StringComparer.Ordinal)
             .OrderBy(line => line, StringComparer.Ordinal)];
+    }
+
+    internal static string? ParseRepositorySlug(string remoteUrl)
+    {
+        if (string.IsNullOrWhiteSpace(remoteUrl))
+            return null;
+
+        var trimmed = remoteUrl.Trim();
+        string? path = null;
+
+        if (trimmed.StartsWith("git@", StringComparison.OrdinalIgnoreCase))
+        {
+            var colonIndex = trimmed.IndexOf(':');
+            if (colonIndex >= 0 && colonIndex < trimmed.Length - 1)
+                path = trimmed[(colonIndex + 1)..];
+        }
+        else if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+        {
+            path = uri.AbsolutePath.Trim('/');
+        }
+        else if (trimmed.StartsWith("ssh://", StringComparison.OrdinalIgnoreCase))
+        {
+            if (Uri.TryCreate(trimmed, UriKind.Absolute, out var sshUri))
+                path = sshUri.AbsolutePath.Trim('/');
+        }
+
+        if (string.IsNullOrWhiteSpace(path))
+            return null;
+
+        if (path.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+            path = path[..^".git".Length];
+
+        var segments = path
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return segments.Length >= 2
+            ? $"{segments[^2]}/{segments[^1]}".ToLowerInvariant()
+            : null;
     }
 
     private static bool IsPlausibleGitUrl(string url)

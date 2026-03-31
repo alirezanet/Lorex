@@ -37,6 +37,11 @@ public static class ListCommand
             }
 
             var installed = new HashSet<string>(config.InstalledSkills, StringComparer.OrdinalIgnoreCase);
+            var recommended = InstallCommand.GetRecommendedSkillNames(
+                available,
+                config,
+                InstallCommand.GetProjectTagKeys(projectRoot, ServiceFactory.Git));
+            var recommendedSet = recommended.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             var table = new Table()
                 .Border(TableBorder.Rounded)
@@ -46,10 +51,14 @@ public static class ListCommand
                 .AddColumn("[bold]Tags[/]")
                 .AddColumn("[bold]Status[/]");
 
-            foreach (var skill in available.OrderBy(s => s.Name))
+            foreach (var skill in available
+                .OrderByDescending(s => recommendedSet.Contains(s.Name))
+                .ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase))
             {
                 var status = installed.Contains(skill.Name)
                     ? "[green]installed[/]"
+                    : recommendedSet.Contains(skill.Name)
+                    ? "[blue]recommended[/]"
                     : "[dim]available[/]";
 
                 table.AddRow(
@@ -62,8 +71,10 @@ public static class ListCommand
 
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine("[dim]Registry:[/] [bold]{0}[/]", Markup.Escape(config.Registry.Url));
+            if (recommended.Count > 0)
+                AnsiConsole.MarkupLine("[dim]Recommended for this project:[/] [bold]{0}[/]", Markup.Escape(string.Join(", ", recommended)));
             AnsiConsole.Write(table);
-            AnsiConsole.MarkupLine("[dim]Run [bold]lorex install[/] to choose skills interactively, or [bold]lorex install <skill>[/] to install one directly.[/]");
+            AnsiConsole.MarkupLine("[dim]Run [bold]lorex install[/] to choose skills interactively, [bold]lorex install --recommended[/] to install suggested skills, or [bold]lorex install <skill>[/] to install one directly.[/]");
             return 0;
         }
         catch (Exception ex)

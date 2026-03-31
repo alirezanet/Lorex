@@ -47,7 +47,7 @@ cd your-project
 lorex init
 ```
 
-This detects your AI tools and installs the built-in `lorex` skill so your agent understands how to work with the registry.
+This detects your AI tools, installs the built-in `lorex` skill, and can suggest registry skills tagged for the current repo.
 
 -----
 

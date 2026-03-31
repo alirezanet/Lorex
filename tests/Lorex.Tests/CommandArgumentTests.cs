@@ -14,6 +14,14 @@ public sealed class CommandArgumentTests
     }
 
     [Fact]
+    public void InstallCommand_ParseSkillNames_FiltersRecommendedFlag()
+    {
+        var parsed = InstallCommand.ParseSkillNames(["auth", "--recommended", "api"]);
+
+        Assert.Equal(["auth", "api"], parsed);
+    }
+
+    [Fact]
     public void InstallCommand_GetInstallableSkillNames_ExcludesAlreadyInstalledSkills()
     {
         var config = new LorexConfig
@@ -31,6 +39,34 @@ public sealed class CommandArgumentTests
         var installable = InstallCommand.GetInstallableSkillNames(available, config);
 
         Assert.Equal(["api", "build"], installable);
+    }
+
+    [Fact]
+    public void InstallCommand_GetRecommendedSkillNames_MatchesProjectTags()
+    {
+        var config = new LorexConfig
+        {
+            InstalledSkills = ["auth"],
+        };
+
+        var available = new[]
+        {
+            new SkillMetadata { Name = "api", Description = "API", Tags = ["alirezanet/lorex"] },
+            new SkillMetadata { Name = "auth", Description = "Auth", Tags = ["lorex"] },
+            new SkillMetadata { Name = "build", Description = "Build", Tags = ["dotnet"] },
+        };
+
+        var recommended = InstallCommand.GetRecommendedSkillNames(available, config, ["alirezanet/lorex", "lorex"]);
+
+        Assert.Equal(["api"], recommended);
+    }
+
+    [Fact]
+    public void InstallCommand_NormalizeProjectTag_LowercasesAndNormalizesSlashes()
+    {
+        var normalized = InstallCommand.NormalizeProjectTag("AliRezaNet\\Lorex");
+
+        Assert.Equal("alirezanet/lorex", normalized);
     }
 
     [Fact]
@@ -146,5 +182,15 @@ public sealed class CommandArgumentTests
         var branches = Lorex.Core.Services.GitService.ParseRemoteBranchNames(output, "origin");
 
         Assert.Equal(["dev", "main"], branches);
+    }
+
+    [Fact]
+    public void GitService_ParseRepositorySlug_HandlesHttpsAndSshRemotes()
+    {
+        var https = Lorex.Core.Services.GitService.ParseRepositorySlug("https://github.com/alirezanet/lorex.git");
+        var ssh = Lorex.Core.Services.GitService.ParseRepositorySlug("git@github.com:alirezanet/lorex.git");
+
+        Assert.Equal("alirezanet/lorex", https);
+        Assert.Equal("alirezanet/lorex", ssh);
     }
 }

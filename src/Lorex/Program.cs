@@ -66,7 +66,7 @@ static int PrintHelp()
         => grid.AddRow($"  [bold]{cmd}[/]", $"[dim]{args}[/]", desc);
 
     Row("init",      "[[<url>]] [[--local]] [[--adapters a,b]]", "Configure a registry (or run local-only) and set up this project");
-    Row("install",   "[[<skill>…]] [[--all]]",       "Install skills from the registry, or choose interactively");
+    Row("install",   "[[<skill>…]] [[--all]] [[--recommended]]",       "Install skills from the registry, or choose interactively");
     Row("uninstall", "[[<skill>…]] [[--all]]",       "Remove installed skills, or choose interactively");
     Row("list",      "",                   "List skills available in the registry");
     Row("status",    "",                   "Show installed skills and their state");

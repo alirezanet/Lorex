@@ -27,7 +27,7 @@ Lorex commands resolve the project root by walking up from the current working d
 |---|---|---|
 | `init` | `lorex init [<url>] [--local] [--adapters a,b]` | Set up lorex in a project and load or initialize the registry policy |
 | `create` | `lorex create [<name>] [-d desc] [-t tags] [-o owner]` | Scaffold a new local skill |
-| `install` | `lorex install [<skill>…] [--all]` | Install skills from the registry into this project |
+| `install` | `lorex install [<skill>…] [--all] [--recommended]` | Install skills from the registry into this project |
 | `uninstall` | `lorex uninstall [<skill>…] [--all]` | Remove installed skills from this project |
 | `list` | `lorex list` | Browse skills available in the registry |
 | `status` | `lorex status` | Show installed skills, registry state, and adapter targets |
@@ -44,7 +44,7 @@ Running `lorex init` with no arguments opens a guided setup flow:
 2. Choose which agent integrations lorex should maintain
 3. If the registry has no manifest yet, choose its publish mode so lorex can initialize it
 
-Running `lorex install` with no skill names opens an interactive flow where users can install all available skills or choose a subset. `lorex uninstall` similarly supports `--all` or an interactive flow to remove all installed skills or choose a subset.
+Running `lorex install` with no skill names opens an interactive flow where users can install recommended skills, install everything, or choose a subset. Recommendations are based on exact tag matches against the current repo slug like `owner/repo`, or the folder name if no git slug is available. `lorex uninstall` similarly supports `--all` or an interactive flow to remove all installed skills or choose a subset.
 
 Shared registries declare their own contribution policy in `/.lorex-registry.json`:
 
