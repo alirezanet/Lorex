@@ -46,7 +46,7 @@ dotnet tool install -g lorex
 Lorex is a high-performance **Native** binary. No runtime required.
 
 1.  Download the latest release for your OS (Windows, macOS, Linux) from [GitHub Releases](https://github.com/alirezanet/lorex/releases).
-2.  Add the binary to your `PATH`.
+2.  Rename it to `lorex` and Add the binary to your `PATH`.
 
 -----
 
