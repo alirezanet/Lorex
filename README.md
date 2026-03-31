@@ -33,7 +33,21 @@
 
 Choose the method that fits your workflow:
 
-#### **For .NET Developers (Recommended)**
+#### **Quick Install (Recommended)**
+
+Install from the latest GitHub release:
+
+Windows (PowerShell):
+```powershell
+irm https://raw.githubusercontent.com/alirezanet/lorex/main/scripts/install.ps1 | iex
+```
+
+macOS / Linux:
+```bash
+curl -fsSL https://raw.githubusercontent.com/alirezanet/lorex/main/scripts/install.sh | sh
+```
+
+#### **For .NET Developers**
 
 Install Lorex as a global tool using the .NET 10 SDK:
 
@@ -41,7 +55,7 @@ Install Lorex as a global tool using the .NET 10 SDK:
 dotnet tool install -g lorex --version v0.0.1-beta.3
 ```
 
-#### **For Everyone Else (Standalone Binary)**
+#### **Manual Download (Fallback)**
 
 Lorex is a high-performance **Native** binary. No runtime required.
 
