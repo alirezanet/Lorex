@@ -194,6 +194,13 @@ public static class InitCommand
         }
 
 FinishInit:
+        var remainingRegistrySkills = registryUrl is not null
+            ? FindRemainingRegistrySkills(projectRoot, config)
+            : [];
+        var remainingRecommendedSkills = registryUrl is not null
+            ? FindRecommendedSkills(projectRoot, config)
+            : [];
+
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("[green]✓[/] lorex initialised. Native agent projections updated:");
         foreach (var name in selectedAdapters)
@@ -210,8 +217,12 @@ FinishInit:
         }
         if (registryUrl is null)
             AnsiConsole.MarkupLine("[dim]Running in local-only mode. Ask your AI agent to create a skill for this project, or run [bold]lorex create[/] to scaffold one.[/]");
+        else if (remainingRecommendedSkills.Count > 0)
+            AnsiConsole.MarkupLine("[dim]This registry still has [bold]{0}[/] recommended skill(s) not installed in this project. Run [bold]lorex install --recommended[/] to add them, [bold]lorex list[/] to browse everything else, and [bold]lorex sync[/] later to refresh installed shared skills.[/]", remainingRecommendedSkills.Count);
+        else if (remainingRegistrySkills.Count > 0)
+            AnsiConsole.MarkupLine("[dim]This registry has [bold]{0}[/] additional shared skill(s) available. Run [bold]lorex list[/] to browse them, and [bold]lorex sync[/] later to refresh installed shared skills.[/]", remainingRegistrySkills.Count);
         else
-            AnsiConsole.MarkupLine("[dim]Run [/][bold]lorex install <skill>[/][dim] to add your first skill.[/]");
+            AnsiConsole.MarkupLine("[dim]Run [bold]lorex sync[/] later to refresh installed shared skills.[/]");
         return 0;
     }
 
@@ -376,12 +387,28 @@ FinishInit:
             .Start("Checking for recommended skills...", ctx =>
             {
                 ctx.Spinner(Spinner.Known.Dots);
-                available = ServiceFactory.Registry.ListAvailableSkills(config.Registry.Url);
+                available = ServiceFactory.Registry.ListAvailableSkills(config.Registry.Url, refresh: false);
             });
 
         return InstallCommand.GetRecommendedSkillNames(
             available,
             config,
             InstallCommand.GetProjectTagKeys(projectRoot, ServiceFactory.Git));
+    }
+
+    private static List<string> FindRemainingRegistrySkills(string projectRoot, LorexConfig config)
+    {
+        if (config.Registry is null)
+            return [];
+
+        IReadOnlyList<SkillMetadata> available = [];
+        AnsiConsole.Status()
+            .Start("Checking registry skills...", ctx =>
+            {
+                ctx.Spinner(Spinner.Known.Dots);
+                available = ServiceFactory.Registry.ListAvailableSkills(config.Registry.Url, refresh: false);
+            });
+
+        return InstallCommand.GetInstallableSkillNames(available, config);
     }
 }

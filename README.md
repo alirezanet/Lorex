@@ -47,7 +47,7 @@ cd your-project
 lorex init
 ```
 
-This detects your AI tools, installs the built-in `lorex` skill, and can suggest registry skills tagged for the current repo.
+This detects your AI tools, installs the built-in `lorex` skill, and can suggest registry skills tagged for the current repo. If the connected registry already has skills this project does not have yet, Lorex points you to `lorex install --recommended` or `lorex list`, and `lorex sync` for keeping installed shared skills fresh.
 
 -----
 

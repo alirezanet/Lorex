@@ -43,9 +43,9 @@ public sealed class RegistryService(GitService git)
     }
 
     /// <summary>Scans the cached registry and returns metadata for all available skills.</summary>
-    public IReadOnlyList<SkillMetadata> ListAvailableSkills(string registryUrl)
+    public IReadOnlyList<SkillMetadata> ListAvailableSkills(string registryUrl, bool refresh = true)
     {
-        var cacheDir = EnsureCache(registryUrl);
+        var cacheDir = refresh ? EnsureCache(registryUrl) : GetCachePath(registryUrl);
         var skillsRoot = Path.Combine(cacheDir, "skills");
 
         if (!Directory.Exists(skillsRoot))
