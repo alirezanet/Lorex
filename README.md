@@ -10,21 +10,19 @@
 
 -----
 
-## ℹ️ Who Needs Lorex?
+### ℹ️ Who Needs Lorex?
 
 - People using multiple AI agents and want one reusable skill source.
 - Teams who want to share AI-ready project knowledge without rewriting it for every person or every tool.
 - Developers who want project-specific skills to be easy for others to install and use.
 - People who have strong AI sessions but find it hard to turn that knowledge into a reusable skill.
 
------
-
 ### ⚡ Why Lorex?
   * **Works with every agent:** Add a skill once. Lorex projects a synchronized link to your all AI agent tools.
   * **Shared Intelligence:** Build a central "Team Registry" (any Git repo) to share standards (e.g., `security-rules`, `api-conventions`) across your entire organization.
   * **Native AOT:** Fast CLI, No runtime, no VM, no bulky dependencies.
 
------
+ 
 
 ## 🚀 Get Started
 
@@ -162,6 +160,13 @@ dotnet install.cs # Builds and installs the dev version
 ```
 
 **This repo dogfoods Lorex.** Once cloned, your AI agent can read the `lorex-contributing` skill to learn the internal architecture and contribution workflow automatically\!
+
+Some future ideas we will likely explore:
+
+- Shared prompts and other reusable AI assets alongside skills.
+- Support for sub-agents and other structured agent building blocks.
+- More AI providers and native integrations.
+- Better ways to extract reusable skills from successful AI sessions.
 
 -----
 
