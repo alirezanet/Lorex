@@ -70,10 +70,19 @@ public static class InitCommand
             AnsiConsole.Status().Start("Loading registry policy...", ctx =>
             {
                 ctx.Spinner(Spinner.Known.Dots);
-                registryPolicy = ServiceFactory.Registry.ReadRegistryPolicy(registryUrl)
-                    ?? throw new InvalidOperationException(
-                        $"Registry '{registryUrl}' is missing {RegistryService.RegistryManifestFileName}. Run `lorex init` interactively to initialize it.");
+                registryPolicy = ServiceFactory.Registry.ReadRegistryPolicy(registryUrl);
             });
+
+            if (registryPolicy is null)
+            {
+                if (Console.IsInputRedirected || Console.IsOutputRedirected)
+                {
+                    throw new InvalidOperationException(
+                        $"Registry '{registryUrl}' is missing {RegistryService.RegistryManifestFileName}. Run `lorex init` interactively to initialize it.");
+                }
+
+                registryPolicy = ResolveRegistryPolicyInteractive(registryUrl);
+            }
         }
         else
         {

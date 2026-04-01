@@ -102,14 +102,15 @@ public sealed class RegistryService(GitService git)
         if (existing is not null)
             return existing;
 
+        if (!git.HasCommits(cacheDir))
+            git.CheckoutOrphan(cacheDir, policy.BaseBranch);
+
         File.WriteAllText(
             manifestPath,
             System.Text.Json.JsonSerializer.Serialize(policy, LorexJsonContext.Default.RegistryPolicy) + "\n");
 
-        if (!git.HasCommits(cacheDir))
-            git.CheckoutOrphan(cacheDir, policy.BaseBranch);
-
         git.AddAll(cacheDir);
+        git.AddForce(cacheDir, RegistryManifestFileName);
         git.Commit(cacheDir, "chore: initialize lorex registry policy");
         git.PushSetUpstream(cacheDir, "origin", policy.BaseBranch);
 

@@ -40,10 +40,12 @@ public sealed class GitService
         if (process.ExitCode != 0)
         {
             var error = stderr.ToString().Trim();
-            var hint = IsAuthError(error)
+            var output = stdout.ToString().Trim();
+            var details = string.IsNullOrWhiteSpace(error) ? output : error;
+            var hint = IsAuthError(details)
                 ? "\nHint: configure git credentials — SSH key, HTTPS token, or run `gh auth login`."
                 : string.Empty;
-            throw new GitException($"git {args} failed (exit {process.ExitCode}):\n{error}{hint}");
+            throw new GitException($"git {args} failed (exit {process.ExitCode}):\n{details}{hint}");
         }
 
         return stdout.ToString();
@@ -140,6 +142,9 @@ public sealed class GitService
 
     public void AddAll(string repoPath) =>
         Run(repoPath, "add", "-A");
+
+    public void AddForce(string repoPath, string pathspec) =>
+        Run(repoPath, "add", "-f", "--", pathspec);
 
     public bool HasChanges(string repoPath) =>
         !string.IsNullOrWhiteSpace(Run(repoPath, "status", "--porcelain"));
