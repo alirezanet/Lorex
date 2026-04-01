@@ -24,6 +24,7 @@
 
   * **Works with every agent:** Add a skill once. Lorex creates a synchronized link to all your AI agent tools.
   * **Shared Intelligence:** Build a central "Team Registry" (any Git repo) to share standards (e.g., `security-rules`, `api-conventions`) across your entire organization.
+  * **No Vendor Lock-in:** Your knowledge remains yours. Lorex uses standard Markdown files stored in your own Git repository, ensuring your "Lore" is portable across any AI tool, today or tomorrow.
   * **Native AOT:** Fast CLI with no runtime, no VM, and no bulky dependencies.
 
 -----
