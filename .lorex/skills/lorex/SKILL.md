@@ -27,13 +27,13 @@ Lorex commands resolve the project root by walking up from the current working d
 
 | Command | Syntax | When to use |
 |---|---|---|
-| `init` | `lorex init [<url>] [--local] [--adapters a,b]` | Set up lorex in a project and load or initialize the registry policy |
+| `init` | `lorex init [<url>] [--local] [--global] [--adapters a,b]` | Set up lorex in a project (or globally with `--global`) and load or initialize the registry policy |
 | `create` | `lorex create [<name>] [-d desc] [-t tags] [-o owner]` | Scaffold a new local skill |
-| `install` | `lorex install [<skill>…] [--all] [--recommended]` | Install skills from the registry into this project |
+| `install` | `lorex install [<skill>…] [--all] [--recommended] [--global]` | Install skills from the registry into this project or globally |
 | `uninstall` | `lorex uninstall [<skill>…] [--all]` | Remove installed skills from this project |
 | `list` | `lorex list` | Browse skills available in the registry |
 | `status` | `lorex status` | Show installed skills, registry state, and adapter targets |
-| `sync` | `lorex sync` | Pull the latest versions and registry policy from the registry |
+| `sync` | `lorex sync [--global]` | Pull the latest versions and registry policy from the registry |
 | `publish` | `lorex publish [<skill>…]` | Contribute local skills using the registry's publish policy |
 | `registry` | `lorex registry` | Interactively update the connected registry's publish policy |
 | `refresh` | `lorex refresh [--target adapter]` | Re-project skills into native agent locations after skill edits |
@@ -133,17 +133,41 @@ The agent-specific projection folders are derived outputs. The canonical state t
 
 When a project is connected to a registry, `.lorex/lorex.json` caches the registry URL plus the effective registry policy. The registry remains the policy owner.
 
+## Global Skills
+
+The `--global` flag installs and syncs skills without being inside a project. Skills land in `~/.lorex/skills/` and are projected into user-level agent directories (`~/.claude/skills/`, `~/.gemini/settings.json`, etc.), making them available in every project on the machine.
+
+```sh
+# One-time setup — run from any directory
+lorex init --global https://github.com/your-org/ai-skills.git --adapters claude,gemini
+
+# Install and keep up to date
+lorex install --all --global
+lorex sync --global
+```
+
+Project skills and global skills are independent. A project can have its own `lorex init` alongside globally installed skills.
+
 ## Registry layout
+
+Registries support flat and nested skill layouts. Skills are discovered by leaf directory name regardless of nesting depth.
 
 ```text
 .lorex-registry.json
 skills/
-  auth-overview/
+  auth-overview/        ← flat (traditional)
     SKILL.md
+  security/             ← category folder (no SKILL.md)
+    auth-logic/
+      SKILL.md
+    rbac/
+      SKILL.md
   deployment/
     SKILL.md
     scripts/
 ```
+
+After install, the project layout is always flat (`.lorex/skills/auth-logic/`, etc.). Skill names must be unique across the registry tree — if two nested paths share the same leaf name, the first one found wins.
 
 ## Troubleshooting
 
@@ -154,6 +178,7 @@ skills/
 | `lorex publish` is blocked | The registry policy is `read-only`; the registry owner must change `/.lorex-registry.json` |
 | `lorex registry` opens a branch instead of changing the policy immediately | The current registry policy is `pull-request`; merge the generated PR branch, then run `lorex sync` |
 | Old `AGENTS.md` / `CLAUDE.md` files still exist | Lorex removes its legacy managed block during refresh; delete the file if it is now empty |
+| `lorex install --global` fails with "not initialised" | Run `lorex init --global` first |
 | Symlinks not working on Windows | Enable Developer Mode or otherwise allow symlink creation; lorex requires symlinks for registry installs and native skill projections |
 | Gemini not loading lorex skills | Confirm `.gemini/settings.json` exists and `context.loadFromIncludeDirectories` is `true` |
 | Published skill still shows as local | Run `lorex status`; registry-backed installs should show as `symlink` when available |

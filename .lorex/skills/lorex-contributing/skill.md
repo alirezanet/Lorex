@@ -60,10 +60,11 @@ lorex/
 │   │   │   ├── SkillService.cs         ← install / uninstall / sync / scaffold / publish
 │   │   │   ├── SkillFileConvention.cs  ← canonical and legacy skill entry helpers
 │   │   │   ├── BuiltInSkillService.cs
-│   │   │   ├── RegistryService.cs
+│   │   │   ├── RegistryService.cs      ← registry cache, skill discovery (flat + nested layouts)
 │   │   │   ├── ProjectRootLocator.cs   ← resolves nearest lorex project root from any subdirectory
+│   │   │   ├── GlobalRootLocator.cs    ← resolves ~/.lorex for --global operations
 │   │   │   ├── GitService.cs
-│   │   │   └── WindowsDevModeHelper.cs
+│   │   │   └── WindowsDevModeHelper.cs ← checks/enables Windows Developer Mode for symlinks
 │   │   ├── Models/
 │   │   └── Serialization/
 │   └── Resources/
@@ -110,6 +111,14 @@ Adapters no longer inject a lorex index into main instruction files. Instead, ea
 
 Adapter projections are derived outputs and are typically gitignored. `.lorex/lorex.json` plus `.lorex/skills/` remain the canonical committed state.
 
+### Global skills
+
+Commands that accept `--global` use `GlobalRootLocator` to resolve `~/.lorex/` as the project-root equivalent. Skills are installed to `~/.lorex/skills/` and projected into user-level agent paths (`~/.claude/skills/`, etc.). `GlobalRootLocator.ResolveForExistingGlobal()` throws `FileNotFoundException` if `~/.lorex/lorex.json` does not exist, so commands should surface the "run `lorex init --global` first" message to the user.
+
+### Nested registry layout
+
+`RegistryService` supports both flat (`skills/name/`) and nested (`skills/category/name/`) registry layouts. A directory is considered a skill if it contains `SKILL.md`, `skill.md`, or `metadata.yaml`; directories without these files are treated as category folders and traversed recursively. `BuildSkillPathIndex` builds a name→path map in a single pass for batch operations. Skill names are deduplicated — first-found wins when two paths share the same leaf name.
+
 ### Skill lifecycle
 
 | Type | Location | Typical representation |
@@ -127,7 +136,7 @@ dotnet run install.cs
 dotnet test
 ```
 
-All commands can be run from a nested directory inside the project; `ProjectRootLocator` resolves the nearest ancestor containing `.lorex/lorex.json`.
+All commands can be run from a nested directory inside the project; `ProjectRootLocator` resolves the nearest ancestor containing `.lorex/lorex.json`. Commands invoked with `--global` bypass project-root discovery and use `GlobalRootLocator` to resolve `~/.lorex/` instead.
 
 Native AOT publish profiles remain under `src/Lorex/Properties/PublishProfiles/`.
 
@@ -171,6 +180,8 @@ If you change any of these areas, update the docs and skills so agents stay accu
 | Adapter paths or projection model | `README.md`, `docs/`, `src/Lorex/Resources/lorex.md`, `.lorex/skills/lorex/SKILL.md`, this file |
 | Architecture or repo layout | `docs/`, this file |
 | Skill file format | `README.md`, `docs/`, `src/Lorex/Resources/lorex.md`, `.lorex/skills/lorex/SKILL.md` |
+| Global skills (`--global` flag) | `docs/reference/commands.md`, `src/Lorex/Resources/lorex.md`, `.lorex/skills/lorex/SKILL.md`, this file |
+| Registry skill discovery (nested layout) | `docs/reference/commands.md`, `src/Lorex/Resources/lorex.md`, `.lorex/skills/lorex/SKILL.md`, this file |
 
 ### docs/ update rules
 
