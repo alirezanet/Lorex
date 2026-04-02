@@ -7,8 +7,8 @@
 [![CI](https://github.com/alirezanet/lorex/actions/workflows/ci.yml/badge.svg)](https://github.com/alirezanet/lorex/actions/workflows/ci.yml)
 [![Native AOT](https://img.shields.io/badge/Native-AOT-blue.svg)](https://docs.microsoft.com/en-us/dotnet/core/deploying/native-aot/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](#license)
-[![Status](https://img.shields.io/badge/status-early%20beta-orange.svg)](#contributing)
 [![Docs](https://img.shields.io/badge/docs-alirezanet.github.io%2FLorex-blue.svg)](https://alirezanet.github.io/Lorex/)
+[![NuGet version (Lorex)](https://img.shields.io/nuget/vpre/Lorex.svg?style=flat-square&label=latest&color=yellowgreen)](https://www.nuget.org/packages/Lorex/)
 
 *Lorex is under active development. Expect rapid changes, rough edges, and frequent improvements.*
 
