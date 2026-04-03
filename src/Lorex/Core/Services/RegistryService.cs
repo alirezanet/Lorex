@@ -11,6 +11,7 @@ public sealed class RegistryService(GitService git)
 {
     public const string RegistryManifestFileName = ".lorex-registry.json";
     private const string SyncTimestampFileName = ".lorex-synced-at";
+    private const string SkillIndexFileName = ".lorex-skill-index.json";
     private static readonly TimeSpan DefaultCacheTtl = TimeSpan.FromHours(1);
 
     private static readonly string CacheRoot =
@@ -34,6 +35,7 @@ public sealed class RegistryService(GitService git)
             {
                 SyncCacheRepository(cacheDir, registryUrl);
                 WriteSyncTimestamp(cacheDir);
+                RebuildSkillIndex(cacheDir);
             }
         }
         else
@@ -42,6 +44,7 @@ public sealed class RegistryService(GitService git)
             git.CloneShallow(registryUrl, cacheDir);
             SyncCacheRepository(cacheDir, registryUrl);
             WriteSyncTimestamp(cacheDir);
+            RebuildSkillIndex(cacheDir);
         }
 
         return cacheDir;
@@ -114,49 +117,25 @@ public sealed class RegistryService(GitService git)
     public IReadOnlyList<SkillMetadata> ListAvailableSkills(string registryUrl, bool refresh = true)
     {
         var cacheDir = refresh ? EnsureCache(registryUrl) : GetCachePath(registryUrl);
-        var skillsRoot = Path.Combine(cacheDir, "skills");
 
-        if (!Directory.Exists(skillsRoot))
-            return [];
-
-        var results = new List<SkillMetadata>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var dir in EnumerateSkillDirectories(skillsRoot))
+        // Fast path: read pre-built index written at sync time (avoids 480+ file ops for large registries)
+        var indexPath = Path.Combine(cacheDir, SkillIndexFileName);
+        if (File.Exists(indexPath))
         {
-            var skillMd = SkillFileConvention.ResolveEntryPath(dir);
-            if (skillMd is not null)
-            {
-                try
-                {
-                    var meta = SimpleYamlParser.ParseSkillMetadataFromMarkdown(File.ReadAllText(skillMd));
-                    if (!seen.Add(meta.Name))
-                        continue; // duplicate name — first-found wins
-                    results.Add(meta);
-                    continue;
-                }
-                catch (InvalidDataException) { /* no frontmatter — fall through to legacy check */ }
-            }
-
-            // Legacy format: separate metadata.yaml
-            var metaFile = Path.Combine(dir, "metadata.yaml");
-            if (!File.Exists(metaFile))
-                continue;
-
             try
             {
-                var meta = SimpleYamlParser.ParseSkillMetadata(File.ReadAllText(metaFile));
-                if (!seen.Add(meta.Name))
-                    continue;
-                results.Add(meta);
+                var json = File.ReadAllText(indexPath);
+                var index = System.Text.Json.JsonSerializer.Deserialize(json, LorexJsonContext.Default.SkillMetadataArray);
+                if (index is { Length: > 0 })
+                    return index;
             }
-            catch (InvalidDataException)
-            {
-                // Skip malformed skills silently — registry may contain work-in-progress entries
-            }
+            catch { /* fall through to full directory scan */ }
         }
 
-        return results;
+        // Slow path: full directory scan (also rebuilds the index for next time)
+        var skills = ScanSkillsFromCache(cacheDir);
+        RebuildSkillIndex(cacheDir);
+        return skills;
     }
 
     /// <summary>Returns the registry policy manifest, refreshing the local cache first by default.</summary>
@@ -297,6 +276,53 @@ public sealed class RegistryService(GitService git)
     {
         try { File.WriteAllText(Path.Combine(cacheDir, SyncTimestampFileName), DateTime.UtcNow.ToString("O")); }
         catch { /* best-effort */ }
+    }
+
+    private static void RebuildSkillIndex(string cacheDir)
+    {
+        try
+        {
+            var index = ScanSkillsFromCache(cacheDir);
+            var json = System.Text.Json.JsonSerializer.Serialize(index, LorexJsonContext.Default.SkillMetadataArray);
+            File.WriteAllText(Path.Combine(cacheDir, SkillIndexFileName), json);
+        }
+        catch { /* best-effort — index is a read-through cache, not required */ }
+    }
+
+    private static SkillMetadata[] ScanSkillsFromCache(string cacheDir)
+    {
+        var skillsRoot = Path.Combine(cacheDir, "skills");
+        if (!Directory.Exists(skillsRoot))
+            return [];
+
+        var results = new List<SkillMetadata>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var dir in EnumerateSkillDirectories(skillsRoot))
+        {
+            var skillMd = SkillFileConvention.ResolveEntryPath(dir);
+            if (skillMd is not null)
+            {
+                try
+                {
+                    var meta = SimpleYamlParser.ParseSkillMetadataFromMarkdown(File.ReadAllText(skillMd));
+                    if (seen.Add(meta.Name)) results.Add(meta);
+                    continue;
+                }
+                catch (InvalidDataException) { }
+            }
+
+            var metaFile = Path.Combine(dir, "metadata.yaml");
+            if (!File.Exists(metaFile)) continue;
+            try
+            {
+                var meta = SimpleYamlParser.ParseSkillMetadata(File.ReadAllText(metaFile));
+                if (seen.Add(meta.Name)) results.Add(meta);
+            }
+            catch (InvalidDataException) { }
+        }
+
+        return [.. results];
     }
 
     private void SyncCacheRepository(string cacheDir, string registryUrl)

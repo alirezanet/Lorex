@@ -26,12 +26,15 @@ public sealed class RegistrySkillQueryService(RegistryService registry, GitServi
     public List<string> GetRecommendedSkillNames(
         string projectRoot,
         IReadOnlyList<SkillMetadata> available,
-        LorexConfig config) =>
-        [.. available
+        LorexConfig config)
+    {
+        var projectTagKeys = GetProjectTagKeys(projectRoot);
+        return [.. available
             .Where(skill => !config.InstalledSkills.Contains(skill.Name, StringComparer.OrdinalIgnoreCase))
-            .Where(skill => IsRecommendedForProject(skill, GetProjectTagKeys(projectRoot)))
+            .Where(skill => IsRecommendedForProject(skill, projectTagKeys))
             .OrderBy(skill => skill.Name, StringComparer.OrdinalIgnoreCase)
             .Select(skill => skill.Name)];
+    }
 
     public string[] GetProjectTagKeys(string projectRoot)
     {
