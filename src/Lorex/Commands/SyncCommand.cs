@@ -33,7 +33,7 @@ public static class SyncCommand
             List<string> skipped = [];
             Lorex.Core.Models.LorexConfig refreshedConfig = cfg;
 
-            if (!RegistryCommandSupport.TryRefreshConfiguredRegistry(projectRoot, out refreshedConfig, "Refreshing registry..."))
+            if (!RegistryCommandSupport.TryRefreshConfiguredRegistry(projectRoot, out refreshedConfig, "Refreshing registry...", forceRefresh: true))
                 return 1;
 
             var overwriteCandidates = refreshedConfig.InstalledSkills

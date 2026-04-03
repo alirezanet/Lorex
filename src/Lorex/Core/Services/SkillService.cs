@@ -72,13 +72,13 @@ public sealed class SkillService(RegistryService registry)
         File.WriteAllText(GlobalConfigPath, JsonSerializer.Serialize(config, LorexJsonContext.Default.GlobalConfig));
     }
 
-    public LorexConfig RefreshRegistryPolicy(string projectRoot, bool refreshRegistry = true)
+    public LorexConfig RefreshRegistryPolicy(string projectRoot, bool refreshRegistry = true, bool forceRefresh = false)
     {
         var config = ReadConfig(projectRoot);
         if (config.Registry is null)
             return config;
 
-        var policy = registry.ReadRegistryPolicy(config.Registry.Url, refreshRegistry)
+        var policy = registry.ReadRegistryPolicy(config.Registry.Url, refreshRegistry, forceRefresh)
             ?? throw new InvalidOperationException(
                 $"Registry '{config.Registry.Url}' is missing {RegistryService.RegistryManifestFileName}.");
 
@@ -334,8 +334,8 @@ public sealed class SkillService(RegistryService registry)
                 }
                 else
                 {
-                    // Target vanished — reinstall
-                    InstallSkill(projectRoot, skillName);
+                    // Target vanished — reinstall using the already-synced cache
+                    InstallSkill(projectRoot, skillName, refreshRegistry: false);
                     updated.Add(skillName);
                 }
                 continue;
@@ -347,7 +347,7 @@ public sealed class SkillService(RegistryService registry)
             if (!approved.Contains(skillName))
                 continue;
 
-            InstallSkill(projectRoot, skillName, overwriteLocalSkill: true);
+            InstallSkill(projectRoot, skillName, overwriteLocalSkill: true, refreshRegistry: false);
             updated.Add(skillName);
         }
 

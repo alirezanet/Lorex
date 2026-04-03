@@ -15,7 +15,7 @@ internal static class RegistryCommandSupport
         return false;
     }
 
-    internal static bool TryRefreshConfiguredRegistry(string projectRoot, out LorexConfig config, string statusMessage = "Refreshing registry policy...")
+    internal static bool TryRefreshConfiguredRegistry(string projectRoot, out LorexConfig config, string statusMessage = "Refreshing registry policy...", bool forceRefresh = false)
     {
         LorexConfig? loadedConfig = null;
 
@@ -25,7 +25,7 @@ internal static class RegistryCommandSupport
                 .Start(statusMessage, ctx =>
                 {
                     ctx.Spinner(Spinner.Known.Dots);
-                    loadedConfig = ServiceFactory.Skills.RefreshRegistryPolicy(projectRoot);
+                    loadedConfig = ServiceFactory.Skills.RefreshRegistryPolicy(projectRoot, forceRefresh: forceRefresh);
                 });
         }
         catch (Exception ex)

@@ -10,6 +10,8 @@ namespace Lorex.Core.Services;
 public sealed class RegistryService(GitService git)
 {
     public const string RegistryManifestFileName = ".lorex-registry.json";
+    private const string SyncTimestampFileName = ".lorex-synced-at";
+    private static readonly TimeSpan DefaultCacheTtl = TimeSpan.FromHours(1);
 
     private static readonly string CacheRoot =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".lorex", "cache");
@@ -17,18 +19,29 @@ public sealed class RegistryService(GitService git)
     private static readonly string WorktreeRoot =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".lorex", "worktrees");
 
-    /// <summary>Returns (and clones/updates) the local cache path for a registry URL.</summary>
-    public string EnsureCache(string registryUrl)
+    /// <summary>
+    /// Returns the local cache path for a registry URL, cloning or syncing as needed.
+    /// Skips the network sync when the cache was refreshed within <see cref="DefaultCacheTtl"/> (1 hour)
+    /// unless <paramref name="forceRefresh"/> is true.
+    /// </summary>
+    public string EnsureCache(string registryUrl, bool forceRefresh = false)
     {
         var cacheDir = GetCachePath(registryUrl);
 
         if (Directory.Exists(Path.Combine(cacheDir, ".git")))
-            SyncCacheRepository(cacheDir, registryUrl);
+        {
+            if (forceRefresh || IsCacheStale(cacheDir))
+            {
+                SyncCacheRepository(cacheDir, registryUrl);
+                WriteSyncTimestamp(cacheDir);
+            }
+        }
         else
         {
             Directory.CreateDirectory(Path.GetDirectoryName(cacheDir)!);
             git.CloneShallow(registryUrl, cacheDir);
             SyncCacheRepository(cacheDir, registryUrl);
+            WriteSyncTimestamp(cacheDir);
         }
 
         return cacheDir;
@@ -147,9 +160,9 @@ public sealed class RegistryService(GitService git)
     }
 
     /// <summary>Returns the registry policy manifest, refreshing the local cache first by default.</summary>
-    public RegistryPolicy? ReadRegistryPolicy(string registryUrl, bool refresh = true)
+    public RegistryPolicy? ReadRegistryPolicy(string registryUrl, bool refresh = true, bool forceRefresh = false)
     {
-        var cacheDir = refresh ? EnsureCache(registryUrl) : GetCachePath(registryUrl);
+        var cacheDir = refresh ? EnsureCache(registryUrl, forceRefresh) : GetCachePath(registryUrl);
         return ReadRegistryPolicyFromDirectory(cacheDir);
     }
 
@@ -261,6 +274,29 @@ public sealed class RegistryService(GitService git)
         {
             return null;
         }
+    }
+
+    private static bool IsCacheStale(string cacheDir)
+    {
+        var stampPath = Path.Combine(cacheDir, SyncTimestampFileName);
+        if (!File.Exists(stampPath))
+            return true;
+
+        try
+        {
+            var written = File.GetLastWriteTimeUtc(stampPath);
+            return DateTime.UtcNow - written > DefaultCacheTtl;
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    private static void WriteSyncTimestamp(string cacheDir)
+    {
+        try { File.WriteAllText(Path.Combine(cacheDir, SyncTimestampFileName), DateTime.UtcNow.ToString("O")); }
+        catch { /* best-effort */ }
     }
 
     private void SyncCacheRepository(string cacheDir, string registryUrl)
