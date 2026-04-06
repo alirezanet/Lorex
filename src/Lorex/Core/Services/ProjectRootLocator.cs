@@ -18,8 +18,29 @@ internal static class ProjectRootLocator
             Path.Combine(Path.GetFullPath(startDirectory), ".lorex", "lorex.json"));
     }
 
-    internal static string ResolveForInit(string startDirectory) =>
-        FindNearestInitializedRoot(startDirectory) ?? Path.GetFullPath(startDirectory);
+    internal static string ResolveForInit(string startDirectory)
+    {
+        var root = FindNearestInitializedRoot(startDirectory);
+        if (root is not null && !IsGlobalRoot(root))
+            return root;
+
+        return Path.GetFullPath(startDirectory);
+    }
+
+    /// <summary>
+    /// Returns <see langword="true"/> when <paramref name="path"/> is the user's home directory,
+    /// which is the project-root equivalent for global lorex operations.
+    /// <c>lorex init</c> must not re-enter an existing global install when invoked inside a new
+    /// project that lives under the home directory.
+    /// </summary>
+    private static bool IsGlobalRoot(string path)
+    {
+        var home = Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var candidate = Path.GetFullPath(path)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return candidate.Equals(home, StringComparison.OrdinalIgnoreCase);
+    }
 
     internal static string? FindNearestInitializedRoot(string startDirectory)
     {
