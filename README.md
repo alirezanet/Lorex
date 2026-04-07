@@ -195,13 +195,6 @@ dotnet test                   # run tests
 
 *Lorex is under active development. Expect rapid changes, rough edges, and frequent improvements.*
 
-### Roadmap Ideas:
-
-  * Shared prompts and other reusable AI assets alongside skills.
-  * Support for sub-agents and structured agent building blocks.
-  * Expanded AI provider support and native integrations.
-  * Improved methods for extracting reusable skills from AI sessions.
-
 -----
 
 ### License
