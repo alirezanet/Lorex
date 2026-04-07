@@ -368,29 +368,30 @@ FinishInit:
 
     private static string? PromptForRegistryInteractive(string? homeRoot = null)
     {
+        // Show the main picker exactly once
+        var knownRegistries = ServiceFactory.Skills.ReadGlobalConfig(homeRoot).Registries;
+        var selected = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold]Where should Lorex get shared skills from?[/]")
+                .PageSize(10)
+                .UseConverter(RenderRegistryChoice)
+                .AddChoices(knownRegistries.Length > 0
+                    ? [.. knownRegistries, AddNewRegistry, UseLocalOnly]
+                    : [AddNewRegistry, UseLocalOnly]));
+
+        if (string.Equals(selected, UseLocalOnly, StringComparison.Ordinal))
+            return null;
+
+        var candidateUrl = string.Equals(selected, AddNewRegistry, StringComparison.Ordinal)
+            ? PromptForRegistryUrlInput()
+            : selected;
+
+        if (string.IsNullOrWhiteSpace(candidateUrl))
+            return null;
+
+        // Retry loop for probe failures only — never re-shows the main picker
         while (true)
         {
-            var knownRegistries = ServiceFactory.Skills.ReadGlobalConfig(homeRoot).Registries;
-
-            var selected = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("[bold]Where should Lorex get shared skills from?[/]")
-                    .PageSize(10)
-                    .UseConverter(RenderRegistryChoice)
-                    .AddChoices(knownRegistries.Length > 0
-                        ? [.. knownRegistries, AddNewRegistry, UseLocalOnly]
-                        : [AddNewRegistry, UseLocalOnly]));
-
-            if (string.Equals(selected, UseLocalOnly, StringComparison.Ordinal))
-                return null;
-
-            var candidateUrl = string.Equals(selected, AddNewRegistry, StringComparison.Ordinal)
-                ? PromptForRegistryUrlInput()
-                : selected;
-
-            if (string.IsNullOrWhiteSpace(candidateUrl))
-                return null;
-
             var trimmedUrl = candidateUrl.Trim();
             string? probeError = null;
             AnsiConsole.Status().Start("Verifying registry…", ctx =>
@@ -406,13 +407,15 @@ FinishInit:
 
             var retryChoice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("[bold]What do you want to do next?[/]")
-                    .AddChoices("Try another registry", "Use local-only mode"));
+                    .Title("[bold]What do you want to do?[/]")
+                    .AddChoices("Try a different URL", "Use local-only mode"));
 
             if (string.Equals(retryChoice, "Use local-only mode", StringComparison.Ordinal))
                 return null;
 
-            AnsiConsole.WriteLine();
+            candidateUrl = PromptForRegistryUrlInput();
+            if (string.IsNullOrWhiteSpace(candidateUrl))
+                return null;
         }
     }
 
