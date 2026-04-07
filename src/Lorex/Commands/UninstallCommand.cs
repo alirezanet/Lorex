@@ -9,7 +9,7 @@ public static class UninstallCommand
 {
     private const string AllFlag    = "--all";
     private const string GlobalFlag = "--global";
-    private const string SelectAllItem = "[ Select All ]";
+    private const string SelectAllItem = "* Select All";
 
     /// <summary>Runs the command. Returns 0 on success, 1 on failure.</summary>
     public static int Run(string[] args, string? cwd = null, string? homeRoot = null)

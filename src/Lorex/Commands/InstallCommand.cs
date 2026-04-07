@@ -214,13 +214,14 @@ public static class InstallCommand
         args.Any(a => string.Equals(a, RecommendedFlag, StringComparison.OrdinalIgnoreCase));
 
     internal static bool WantsGlobal(string[] args) =>
-        args.Any(a => string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase));
+        args.Any(a => string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase) ||
+                      string.Equals(a, "-g",       StringComparison.OrdinalIgnoreCase));
 
     internal static string? ParseSearch(string[] args) => ArgParser.FlagValue(args, SearchFlag);
     internal static string? ParseTag(string[] args)    => ArgParser.FlagValue(args, TagFlag);
 
     /// <summary>
-    /// Returns the skill names from <paramref name="args"/>, excluding all flags (any arg starting with <c>--</c>)
+    /// Returns the skill names from <paramref name="args"/>, excluding all flags (any arg starting with <c>-</c>)
     /// and the value arguments that follow value-carrying flags (<c>--search</c>, <c>--tag</c>).
     /// </summary>
     internal static List<string> ParseSkillNames(string[] args)
@@ -231,7 +232,7 @@ public static class InstallCommand
             var arg = args[i];
             if (string.IsNullOrWhiteSpace(arg)) continue;
             if (IsValueFlag(arg)) { i++; continue; }  // skip flag and its value
-            if (arg.StartsWith("--", StringComparison.Ordinal)) continue;
+            if (arg.StartsWith("-", StringComparison.Ordinal)) continue;
             result.Add(arg);
         }
         return [.. result.Distinct(StringComparer.OrdinalIgnoreCase)];

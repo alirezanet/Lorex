@@ -25,7 +25,8 @@ public static class InitCommand
         if (args.Any(a => a is "--help" or "-h"))
             return PrintHelp();
 
-        var isGlobal = args.Any(a => string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase));
+        var isGlobal = args.Any(a => string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase) ||
+                                     string.Equals(a, "-g",       StringComparison.OrdinalIgnoreCase));
 
         if (isGlobal && OperatingSystem.IsWindows() && !WindowsDevModeHelper.IsSymlinkAvailable())
         {
