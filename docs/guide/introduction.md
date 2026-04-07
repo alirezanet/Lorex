@@ -28,7 +28,7 @@ You write a skill (or ask your AI to write it for you). From that point on, ever
 
 ## For teams
 
-Connect a Git repository as your team's skill registry. Publish a skill once and every developer on the team can install it with `lorex install`. When the skill evolves, `lorex sync` updates everyone. Skills go through the same Git review process as your code — PRs, diffs, history.
+Connect a Git repository as your team's skill registry. Publish a skill once and every developer on the team can install it with `lorex install`. When the skill evolves in the registry, each developer runs `lorex sync` to pull the latest. Skills go through the same Git review process as your code, PRs, diffs, history.
 
 ## For open-source projects
 
