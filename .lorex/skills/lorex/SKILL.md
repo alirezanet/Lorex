@@ -49,6 +49,7 @@ Running `lorex init` with no arguments opens a guided setup flow:
 1. Choose a saved registry, enter a new registry URL, or keep the repo local-only
 2. Choose which agent integrations lorex should maintain
 3. If the registry has no manifest yet, choose its publish mode so lorex can initialize it
+4. If the registry defines `recommendedTaps`, offer to add them (user must accept — never added silently)
 
 When a connected registry already has skills that this project does not have installed, `lorex init` finishes by pointing users to `lorex install --recommended` or `lorex list`, and reminds them to use `lorex sync` later to refresh installed shared skills.
 
@@ -89,6 +90,8 @@ Shared registries declare their own contribution policy in `/.lorex-registry.jso
 - `direct`: `lorex publish` commits and pushes straight to the registry
 - `pull-request`: `lorex publish` creates a branch, pushes it, and prints a PR URL when possible
 - `read-only`: `lorex publish` is blocked
+
+A registry can also declare `recommendedTaps` — read-only skill sources it suggests to all connected projects. Lorex surfaces these during `lorex init` (user must accept) and notifies on `lorex sync` when new ones appear. Taps are never added silently.
 
 Run `lorex registry` to change that policy interactively. If the registry currently uses `direct`, lorex updates `/.lorex-registry.json` immediately. If it currently uses `pull-request`, lorex prepares a review branch and leaves the project on the existing policy until that PR is merged and `lorex sync` is run.
 

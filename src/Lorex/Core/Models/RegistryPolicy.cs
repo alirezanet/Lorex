@@ -16,4 +16,11 @@ public sealed record RegistryPolicy
 
     /// <summary>Prefix to use for PR branches created by lorex.</summary>
     public string PrBranchPrefix { get; init; } = "lorex/";
+
+    /// <summary>
+    /// Read-only skill sources (taps) that this registry recommends.
+    /// Lorex surfaces these during <c>lorex init</c> and notifies on <c>lorex sync</c>
+    /// when new ones appear. Users must explicitly accept them — they are never added silently.
+    /// </summary>
+    public TapConfig[]? RecommendedTaps { get; init; }
 }

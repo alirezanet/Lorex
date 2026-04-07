@@ -87,8 +87,29 @@ public static class SyncCommand
                     AnsiConsole.MarkupLine("[yellow]Skipped[/] [bold]{0}[/] [dim](kept existing local skill)[/]", name);
             }
 
-            // ── Tap sync ─────────────────────────────────────────────────────
+            // ── Notify about new registry-recommended taps ───────────────────
             var latestConfig = ServiceFactory.Skills.ReadConfig(projectRoot);
+            if (latestConfig.Registry is not null)
+            {
+                var policy = ServiceFactory.Registry.ReadRegistryPolicy(latestConfig.Registry.Url, refresh: false);
+                if (policy?.RecommendedTaps is { Length: > 0 } recommended)
+                {
+                    var configuredUrls = new HashSet<string>(
+                        latestConfig.Taps.Select(t => t.Url), StringComparer.OrdinalIgnoreCase);
+                    var newTaps = recommended.Where(t => !configuredUrls.Contains(t.Url)).ToList();
+                    if (newTaps.Count > 0)
+                    {
+                        var tapList = string.Join(", ", newTaps.Select(t => Markup.Escape(t.Name)));
+                        AnsiConsole.MarkupLine(
+                            "[blue]ℹ[/] This registry recommends {0} new tap source{1}: [bold]{2}[/]",
+                            newTaps.Count, newTaps.Count == 1 ? "" : "s", tapList);
+                        AnsiConsole.MarkupLine(
+                            "[dim]Run [bold]lorex tap add <url>[/] to add them, or [bold]lorex init[/] to configure interactively.[/]");
+                    }
+                }
+            }
+
+            // ── Tap sync ─────────────────────────────────────────────────────
             if (latestConfig.Taps.Length > 0)
             {
                 IReadOnlyList<string> syncedTaps = [];

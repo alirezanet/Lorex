@@ -85,7 +85,7 @@ public static class InitCommand
             AnsiConsole.Status().Start("Loading registry policy...", ctx =>
             {
                 ctx.Spinner(Spinner.Known.Dots);
-                registryPolicy = ServiceFactory.Registry.ReadRegistryPolicy(registryUrl);
+                registryPolicy = ServiceFactory.Registry.ReadRegistryPolicy(registryUrl, forceRefresh: true);
             });
 
             if (registryPolicy is null)
@@ -221,6 +221,57 @@ public static class InitCommand
             }
         }
 
+        // ── Recommended taps from the registry ───────────────────────────────
+        if (!Console.IsInputRedirected && registryPolicy is { RecommendedTaps: { Length: > 0 } recommendedTaps })
+        {
+            config = ServiceFactory.Skills.ReadConfig(projectRoot);
+            var configuredUrls = new HashSet<string>(config.Taps.Select(t => t.Url), StringComparer.OrdinalIgnoreCase);
+            var newTaps = recommendedTaps.Where(t => !configuredUrls.Contains(t.Url)).ToList();
+
+            if (newTaps.Count > 0)
+            {
+                AnsiConsole.WriteLine();
+                var tapPrompt = new MultiSelectionPrompt<TapConfig>()
+                    .Title("[bold]This registry recommends tap sources. Which do you want to add?[/]")
+                    .InstructionsText("[dim](Space to toggle, Enter to confirm, Enter with none = skip)[/]")
+                    .NotRequired()
+                    .UseConverter(t =>
+                        $"[bold]{Markup.Escape(t.Name)}[/] [dim]— {Markup.Escape(t.Url)}" +
+                        (t.Root is not null ? $" ({Markup.Escape(t.Root)})" : "") + "[/]")
+                    .AddChoices(newTaps);
+
+                // Pre-select all recommended taps — user deselects what they don't want
+                foreach (var tap in newTaps)
+                    tapPrompt.Select(tap);
+
+                var selectedTaps = AnsiConsole.Prompt(tapPrompt);
+
+                foreach (var tap in selectedTaps)
+                {
+                    try
+                    {
+                        IReadOnlyList<SkillMetadata> found = [];
+                        AnsiConsole.Status().Start($"Adding tap {Markup.Escape(tap.Name)}…", ctx =>
+                        {
+                            ctx.Spinner(Spinner.Known.Dots);
+                            found = ServiceFactory.Taps.Add(projectRoot, ServiceFactory.Skills, tap.Url, tap.Name, tap.Root);
+                        });
+                        AnsiConsole.MarkupLine(
+                            "[green]✓[/] Tap [bold]{0}[/] added [dim]({1} skill{2} found)[/]",
+                            Markup.Escape(tap.Name), found.Count, found.Count == 1 ? "" : "s");
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.MarkupLine(
+                            "[yellow]Warning:[/] Could not add tap [bold]{0}[/]: {1}",
+                            Markup.Escape(tap.Name), Markup.Escape(ex.Message));
+                    }
+                }
+
+                config = ServiceFactory.Skills.ReadConfig(projectRoot);
+            }
+        }
+
 FinishInit:
         var remainingRegistrySkills = registryUrl is not null
             ? FindRemainingRegistrySkills(projectRoot, config)
@@ -326,7 +377,7 @@ FinishInit:
         AnsiConsole.Status().Start("Loading registry policy...", ctx =>
         {
             ctx.Spinner(Spinner.Known.Dots);
-            existingPolicy = ServiceFactory.Registry.ReadRegistryPolicy(registryUrl);
+            existingPolicy = ServiceFactory.Registry.ReadRegistryPolicy(registryUrl, forceRefresh: true);
         });
 
         if (existingPolicy is not null)

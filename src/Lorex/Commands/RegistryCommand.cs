@@ -57,9 +57,45 @@ public static class RegistryCommand
                     .AllowEmpty());
         }
 
-        var updatedPolicy = RegistryPolicyPrompts.BuildPolicy(publishMode, baseBranch, prBranchPrefix);
+        // ── Recommended taps ─────────────────────────────────────────────────
+        var updatedRecommendedTaps = currentPolicy.RecommendedTaps;
 
-        if (updatedPolicy == currentPolicy)
+        if (config.Taps.Length > 0)
+        {
+            var currentRecommendedUrls = new HashSet<string>(
+                currentPolicy.RecommendedTaps?.Select(t => t.Url) ?? [],
+                StringComparer.OrdinalIgnoreCase);
+
+            AnsiConsole.WriteLine();
+            var tapPrompt = new MultiSelectionPrompt<TapConfig>()
+                .Title("[bold]Which local taps should this registry recommend to all connected projects?[/]")
+                .InstructionsText("[dim](Space to toggle, Enter to confirm, Enter with none = no recommendations)[/]")
+                .NotRequired()
+                .UseConverter(t =>
+                    $"[bold]{Markup.Escape(t.Name)}[/] [dim]— {Markup.Escape(t.Url)}" +
+                    (t.Root is not null ? $" ({Markup.Escape(t.Root)})" : "") + "[/]")
+                .AddChoices(config.Taps);
+
+            foreach (var tap in config.Taps.Where(t => currentRecommendedUrls.Contains(t.Url)))
+                tapPrompt.Select(tap);
+
+            var selectedTaps = AnsiConsole.Prompt(tapPrompt);
+            updatedRecommendedTaps = selectedTaps.Count > 0 ? [.. selectedTaps] : null;
+        }
+        else if (currentPolicy.RecommendedTaps is { Length: > 0 })
+        {
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine(
+                "[dim]This registry currently recommends [bold]{0}[/] tap(s). Add local taps with [bold]lorex tap add[/] to manage recommendations.[/]",
+                currentPolicy.RecommendedTaps.Length);
+        }
+
+        var updatedPolicy = RegistryPolicyPrompts.BuildPolicy(publishMode, baseBranch, prBranchPrefix) with
+        {
+            RecommendedTaps = updatedRecommendedTaps,
+        };
+
+        if (PolicyEquals(updatedPolicy, currentPolicy))
         {
             AnsiConsole.MarkupLine("[yellow]No registry policy changes to apply.[/]");
             return 0;
@@ -114,8 +150,29 @@ public static class RegistryCommand
     {
         AnsiConsole.MarkupLine("[bold]USAGE[/]  lorex registry");
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[dim]Interactively update the connected registry's publish policy.[/]");
+        AnsiConsole.MarkupLine("[dim]Interactively update the connected registry's publish policy and recommended taps.[/]");
         AnsiConsole.MarkupLine("[dim]Direct registries update immediately. Pull-request registries prepare a review branch instead.[/]");
         return 0;
+    }
+
+    /// <summary>
+    /// Value-equality for <see cref="RegistryPolicy"/> that correctly compares the
+    /// <see cref="RegistryPolicy.RecommendedTaps"/> array by content (not reference).
+    /// </summary>
+    private static bool PolicyEquals(RegistryPolicy a, RegistryPolicy b)
+    {
+        if (!string.Equals(a.PublishMode,    b.PublishMode,    StringComparison.OrdinalIgnoreCase)) return false;
+        if (!string.Equals(a.BaseBranch,     b.BaseBranch,     StringComparison.OrdinalIgnoreCase)) return false;
+        if (!string.Equals(a.PrBranchPrefix, b.PrBranchPrefix, StringComparison.OrdinalIgnoreCase)) return false;
+
+        var aTaps = a.RecommendedTaps ?? [];
+        var bTaps = b.RecommendedTaps ?? [];
+        if (aTaps.Length != bTaps.Length) return false;
+
+        // Order-sensitive: same taps in same order is considered equal
+        return aTaps.Zip(bTaps).All(pair =>
+            string.Equals(pair.First.Name, pair.Second.Name, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(pair.First.Url,  pair.Second.Url,  StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(pair.First.Root, pair.Second.Root, StringComparison.OrdinalIgnoreCase));
     }
 }

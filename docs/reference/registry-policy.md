@@ -57,6 +57,39 @@ Best for: curated registries where only maintainers publish.
 | `publishMode` | `pull-request` | One of `direct`, `pull-request`, or `read-only` |
 | `baseBranch` | `main` | The branch `lorex install`/`sync` reads from, and the base for PR branches |
 | `prBranchPrefix` | `lorex/` | Prefix for branches created by `lorex publish` in `pull-request` mode |
+| `recommendedTaps` | *(absent)* | Optional list of tap sources the registry recommends to all connected projects |
+
+---
+
+## Recommended taps
+
+A registry can suggest read-only skill sources (taps) that complement its own skills. Add them to `.lorex-registry.json`:
+
+```json
+{
+  "publishMode": "pull-request",
+  "baseBranch": "main",
+  "recommendedTaps": [
+    { "name": "dotnet", "url": "https://github.com/dotnet/skills", "root": "plugins" },
+    { "name": "security", "url": "https://github.com/example/security-skills" }
+  ]
+}
+```
+
+Each entry uses the same fields as a project tap:
+
+| Field | Required | Description |
+| :--- | :--- | :--- |
+| `url` | yes | Git URL of the tap repository |
+| `name` | yes | Short label shown in `lorex list`, `lorex status`, and TUI source columns |
+| `root` | no | Subdirectory within the repo where skills live (defaults to repo root) |
+
+**How lorex surfaces these:**
+
+- **`lorex init`** — when connecting to a registry interactively, lorex checks for recommended taps not yet in the project and asks: *"This registry recommends N tap source(s): … Add them?"* The user must explicitly accept; taps are never added silently.
+- **`lorex sync`** — after syncing, lorex compares the registry's current `recommendedTaps` against the project's configured taps. If new ones have been added to the registry since the project was initialised, lorex prints a notice and suggests `lorex tap add` or `lorex init`. No taps are modified automatically.
+
+This design keeps the registry as a *suggestion authority*, not a *control authority* — team members decide which external sources land on their machine.
 
 ---
 

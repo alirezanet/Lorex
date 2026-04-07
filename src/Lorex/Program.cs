@@ -87,18 +87,18 @@ static int PrintHelp()
         AnsiConsole.WriteLine();
     }
 
-    Section("Local", g =>
+    Section("General", g =>
     {
         Row(g, "init",    "[[<url>]] [[--local]] [[--global]] [[--adapters a,b]]",  "Configure a registry and set up this project or global skills");
         Row(g, "create",  "[[<name>]] [[-d desc]] [[-t tags]] [[-o owner]]",   "Scaffold a new skill for AI/manual authoring");
         Row(g, "status",  "",                                                   "Show installed skills and their state");
         Row(g, "refresh", "[[--target adapter]]",                               "Re-project lorex skills into native agent locations");
+        Row(g, "install",   "[[<skill|url>…]] [[--all]] [[--recommended]] [[--search <text>]] [[--tag <tag>]] [[--global]]", "Install skills from registry, taps, or a URL");
+        Row(g, "uninstall", "[[<skill>…]] [[--all]]",                                                                        "Remove installed skills, or choose interactively");
     });
 
     Section("Registry", g =>
     {
-        Row(g, "install",   "[[<skill|url>…]] [[--all]] [[--recommended]] [[--search <text>]] [[--tag <tag>]] [[--global]]", "Install skills from registry, taps, or a URL");
-        Row(g, "uninstall", "[[<skill>…]] [[--all]]",                                                                        "Remove installed skills, or choose interactively");
         Row(g, "list",      "[[--search <text>]] [[--tag <tag>]] [[--page <n>]] [[--page-size <n>]]",                        "Browse and filter skills available in the registry and taps");
         Row(g, "sync",      "[[--global]]",                                                                                  "Pull latest skill versions from the registry and all taps");
         Row(g, "publish",   "[[<skill>…]]",                                                                                  "Push local skills to the registry");
