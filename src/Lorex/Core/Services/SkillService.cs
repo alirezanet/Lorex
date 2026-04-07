@@ -167,6 +167,8 @@ public sealed class SkillService(RegistryService registry)
             InstalledSkillVersions = versions,
             InstalledSkillSources  = sources,
         });
+
+        RefreshSkillsGitIgnore(projectRoot);
     }
 
     // ── Install ───────────────────────────────────────────────────────────────
@@ -217,6 +219,8 @@ public sealed class SkillService(RegistryService registry)
                 : [.. config.InstalledSkills, skillName],
             InstalledSkillVersions = versions,
         });
+
+        RefreshSkillsGitIgnore(projectRoot);
     }
 
     /// <summary>
@@ -301,6 +305,7 @@ public sealed class SkillService(RegistryService registry)
             WriteConfig(projectRoot, config with { InstalledSkills = allInstalled, InstalledSkillVersions = versions });
         }
 
+        RefreshSkillsGitIgnore(projectRoot);
         return [.. installed];
     }
 
@@ -348,6 +353,8 @@ public sealed class SkillService(RegistryService registry)
             InstalledSkillVersions = versions,
             InstalledSkillSources  = sources,
         });
+
+        RefreshSkillsGitIgnore(projectRoot);
     }
 
     /// <summary>
@@ -423,6 +430,7 @@ public sealed class SkillService(RegistryService registry)
             });
         }
 
+        RefreshSkillsGitIgnore(projectRoot);
         return installed;
     }
 
@@ -854,6 +862,50 @@ public sealed class SkillService(RegistryService registry)
     /// <summary>
     /// Attempts to create a directory symlink. Returns true on success, false if not permitted.
     /// </summary>
+    /// <summary>
+    /// Rewrites <c>.lorex/skills/.gitignore</c> so every symlinked skill (registry or tap install)
+    /// is ignored by git, while real directories (local skills) remain trackable.
+    /// Also untracks any already-tracked symlinks via <c>git rm --cached</c> (best-effort).
+    /// Safe to call after any install or uninstall operation.
+    /// </summary>
+    private static void RefreshSkillsGitIgnore(string projectRoot)
+    {
+        var skillsDir = Path.Combine(projectRoot, LorexDir, "skills");
+        if (!Directory.Exists(skillsDir))
+            return;
+
+        var symlinkNames = Directory.EnumerateDirectories(skillsDir)
+            .Where(d => new DirectoryInfo(d).LinkTarget is not null)
+            .Select(d => Path.GetFileName(d)!)
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var gitIgnorePath = Path.Combine(skillsDir, ".gitignore");
+
+        if (symlinkNames.Count == 0)
+        {
+            if (File.Exists(gitIgnorePath))
+                File.Delete(gitIgnorePath);
+            return;
+        }
+
+        var lines = new List<string>
+        {
+            "# Managed by lorex — symlinked skills (registry and tap installs).",
+            "# Local skills are real directories and are committed normally.",
+            "",
+            "# This file is self-ignoring.",
+            ".gitignore",
+            ""
+        };
+        // No trailing slash: git stores symlinks as blob objects (mode 120000), not trees,
+        // so a trailing-slash pattern would never match them — regardless of platform or
+        // core.symlinks setting. A bare name matches both blobs and trees.
+        lines.AddRange(symlinkNames);
+
+        File.WriteAllText(gitIgnorePath, string.Join("\n", lines) + "\n");
+    }
+
     private static bool TryCreateSymlink(string linkPath, string targetPath)
     {
         try
