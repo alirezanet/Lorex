@@ -72,6 +72,10 @@ lorex init https://github.com/your-org/ai-skills.git -a codex,claude
 
 # Global (user-level) setup — works from any directory
 lorex init --global https://github.com/your-org/ai-skills.git --adapters claude,gemini
+
+# Local absolute path — useful for monorepos, network shares, or local testing
+lorex init /path/to/my-registry            # Linux / macOS
+lorex init C:\repos\my-registry            # Windows
 ```
 
 ---
@@ -523,7 +527,7 @@ lorex tap add <url> [--name <name>] [--root <path>] [-g|--global]
 
 | Argument / Flag | Description |
 | :--- | :--- |
-| `<url>` | Git URL of the tap repository (HTTPS or SSH). |
+| `<url>` | Git URL of the tap repository (HTTPS, SSH, or a local absolute path). |
 | `--name <name>` | Short identifier for the tap. Defaults to the repository owner (e.g. `dotnet` from `github.com/dotnet/skills`). |
 | `--root <path>` | Subdirectory within the repo to search for skills. By default lorex checks for a `skills/` subdirectory and falls back to the repo root. |
 | `-g`, `--global` | Add the tap to the global lorex config (`~/.lorex/`) instead of the current project. |
@@ -547,6 +551,10 @@ lorex tap add https://github.com/my-org/monorepo --root tools/skills --name my-o
 
 # Add a tap to the global config (available as a source in all projects)
 lorex tap add https://github.com/dotnet/skills --global
+
+# Local absolute path — monorepo, network share, or local testing
+lorex tap add /path/to/skills-repo --name local-tap   # Linux / macOS
+lorex tap add C:\repos\skills-repo --name local-tap   # Windows
 ```
 
 ### `lorex tap remove`

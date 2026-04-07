@@ -59,7 +59,20 @@ public sealed class GitService
     {
         // Basic format check before hitting the network
         if (!IsPlausibleGitUrl(url))
-            return $"'{url}' does not look like a git URL. Use HTTPS (https://...) or SSH (git@host:org/repo.git).";
+            return $"'{url}' does not look like a git URL. Use HTTPS (https://...) or SSH (git@host:org/repo.git), or an absolute local path.";
+
+        // Local path fast-path: no network needed, just verify the directory is a git repo
+        if (Path.IsPathRooted(url) || url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+        {
+            var localPath = url.StartsWith("file://", StringComparison.OrdinalIgnoreCase)
+                ? new Uri(url).LocalPath
+                : url;
+            if (!Directory.Exists(localPath))
+                return $"Local path '{localPath}' does not exist.";
+            if (!Directory.Exists(Path.Combine(localPath, ".git")))
+                return $"'{localPath}' is not a git repository (no .git directory found).";
+            return null;
+        }
 
         try
         {
@@ -290,6 +303,10 @@ public sealed class GitService
     private static bool IsPlausibleGitUrl(string url)
     {
         if (string.IsNullOrWhiteSpace(url)) return false;
+        // Local absolute path: /path/on/unix  or  C:\path\on\windows
+        if (Path.IsPathRooted(url)) return true;
+        // file:// URI
+        if (url.StartsWith("file://", StringComparison.OrdinalIgnoreCase)) return true;
         // HTTPS
         if (url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return true;
         if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) return true;

@@ -27,7 +27,7 @@ Lorex commands resolve the project root by walking up from the current working d
 
 | Command | Syntax | When to use |
 |---|---|---|
-| `init` | `lorex init [<url>] [--local] [--global] [--adapters a,b]` | Set up lorex in a project (or globally with `--global`) and load or initialize the registry policy |
+| `init` | `lorex init [<url\|path>] [--local] [--global] [--adapters a,b]` | Set up lorex in a project (or globally with `--global`) and load or initialize the registry policy. The URL can be HTTPS, SSH, or a local absolute path. |
 | `create` | `lorex create [<name>] [-d desc] [-t tags] [-o owner]` | Scaffold a new local skill |
 | `install` | `lorex install [<skill\|url>…] [--all] [--recommended] [--search <text>] [--tag <tag>] [-g\|--global]` | Install skills from the registry, a tap, or directly from a URL |
 | `uninstall` | `lorex uninstall [<skill>…] [--all] [-g\|--global]` | Remove installed skills from this project or globally |
@@ -37,7 +37,7 @@ Lorex commands resolve the project root by walking up from the current working d
 | `publish` | `lorex publish [<skill>…]` | Contribute local skills using the registry's publish policy |
 | `registry` | `lorex registry` | Interactively update the connected registry's publish policy |
 | `refresh` | `lorex refresh [--target adapter]` | Re-project skills into native agent locations after skill edits |
-| `tap add` | `lorex tap add <url> [--name <name>] [--root <path>] [-g\|--global]` | Add a read-only skill source (any git repo) |
+| `tap add` | `lorex tap add <url\|path> [--name <name>] [--root <path>] [-g\|--global]` | Add a read-only skill source (any git repo, HTTPS/SSH or local absolute path) |
 | `tap remove` | `lorex tap remove <name> [-g\|--global]` | Remove a tap |
 | `tap list` | `lorex tap list [-g\|--global]` | List configured taps with skill counts |
 | `tap sync` | `lorex tap sync [<name>] [-g\|--global]` | Pull the latest content from all taps or a specific one |
