@@ -29,6 +29,12 @@ internal sealed class LorexTestHarness : IDisposable
         // Redirect all lorex home operations (~/.lorex/cache, ~/.lorex/taps, ~/.lorex/config.json)
         // to the isolated GlobalRoot so tests never touch the real user home directory.
         Environment.SetEnvironmentVariable("LOREX_HOME_OVERRIDE", GlobalRoot);
+
+        // Provide a test git identity so commits succeed on CI runners with no global git config.
+        Environment.SetEnvironmentVariable("GIT_AUTHOR_NAME",     "Lorex Test");
+        Environment.SetEnvironmentVariable("GIT_AUTHOR_EMAIL",    "test@lorex.test");
+        Environment.SetEnvironmentVariable("GIT_COMMITTER_NAME",  "Lorex Test");
+        Environment.SetEnvironmentVariable("GIT_COMMITTER_EMAIL", "test@lorex.test");
     }
 
     // ── Command runners ──────────────────────────────────────────────────────
@@ -224,7 +230,11 @@ internal sealed class LorexTestHarness : IDisposable
 
     public void Dispose()
     {
-        Environment.SetEnvironmentVariable("LOREX_HOME_OVERRIDE", null);
+        Environment.SetEnvironmentVariable("LOREX_HOME_OVERRIDE",   null);
+        Environment.SetEnvironmentVariable("GIT_AUTHOR_NAME",       null);
+        Environment.SetEnvironmentVariable("GIT_AUTHOR_EMAIL",      null);
+        Environment.SetEnvironmentVariable("GIT_COMMITTER_NAME",    null);
+        Environment.SetEnvironmentVariable("GIT_COMMITTER_EMAIL",   null);
 
         if (Directory.Exists(_tempDir))
         {
