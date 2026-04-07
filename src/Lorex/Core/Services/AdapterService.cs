@@ -203,6 +203,9 @@ public sealed class AdapterService
             if (!Directory.Exists(sourceDir))
                 continue;
 
+            if (SkillFileConvention.ResolveEntryPath(sourceDir) is null)
+                continue; // Directory exists but has no SKILL.md — skip rather than throw
+
             var targetDir = Path.Combine(rootPath, skillName);
             EnsureSkillProjection(projectRoot, sourceDir, targetDir, lorexSkillsRoot);
         }
@@ -215,6 +218,10 @@ public sealed class AdapterService
 
         foreach (var skillName in config.InstalledSkills)
         {
+            var sourceDir = Path.Combine(projectRoot, ".lorex", "skills", skillName);
+            if (!Directory.Exists(sourceDir) || SkillFileConvention.ResolveEntryPath(sourceDir) is null)
+                continue;
+
             var path = Path.Combine(rulesDirectory, $"lorex-{skillName}.mdc");
             File.WriteAllText(path, RenderCursorRule(projectRoot, skillName));
         }
@@ -227,6 +234,10 @@ public sealed class AdapterService
 
         foreach (var skillName in config.InstalledSkills)
         {
+            var sourceDir = Path.Combine(projectRoot, ".lorex", "skills", skillName);
+            if (!Directory.Exists(sourceDir) || SkillFileConvention.ResolveEntryPath(sourceDir) is null)
+                continue;
+
             var path = Path.Combine(rulesDirectory, $"lorex-{skillName}.md");
             File.WriteAllText(path, RenderRooRule(projectRoot, skillName));
         }
