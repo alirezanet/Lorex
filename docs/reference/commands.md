@@ -11,19 +11,21 @@ Commands that accept `--global` bypass project-root discovery entirely and opera
 Set up Lorex in a project, configure a registry, and choose which AI agent adapters to maintain.
 
 ```bash
-lorex init [<registry-url>] [--local] [--adapters <a,b,...>]
+lorex init [<url|path>] [--local] [--adapters <a,b,...>] [-g|--global]
 lorex init                         # guided interactive setup
-lorex init --global [<url>]        # user-level (global) setup
+lorex init --global [<url|path>]   # user-level (global) setup
+lorex init --help                  # show command help
 ```
 
 ### Flags
 
 | Flag | Short | Description |
 | :--- | :--- | :--- |
-| `<registry-url>` | — | Git URL of a registry (HTTPS or SSH). Skip to use the interactive picker. |
+| `<url\|path>` | — | Registry URL (HTTPS or SSH) or a local absolute path. Skip to use the interactive picker. |
 | `--local` | — | Set up without a registry. Skills are project-local only. |
-| `--global` | — | Initialise global lorex at `~/.lorex/` instead of the current project. Skills are projected into user-level agent locations (`~/.claude/skills`, `~/.gemini/settings.json`, etc.). |
+| `--global` | `-g` | Initialise global lorex at `~/.lorex/` instead of the current project. Skills are projected into user-level agent locations (`~/.claude/skills`, `~/.gemini/settings.json`, etc.). |
 | `--adapters <list>` | `-a` | Comma-separated list of adapters. Skips the adapter prompt. |
+| `--help` | `-h` | Show command-specific help and exit. |
 
 ### Interactive flow
 
@@ -153,15 +155,14 @@ lorex install                      # interactive TUI picker
 
 ### Interactive mode
 
-Running `lorex install` with no arguments opens a two-step flow:
+Running `lorex install` with no arguments opens the full-screen TUI picker directly:
 
-1. Lorex fetches the registry and all taps, then asks: **Install recommended / Install all / Choose specific**
-2. If you choose "Choose specific", lorex opens a full-screen TUI:
-   - Type to filter by name, description, or tag in real time
-   - ↑↓ to navigate, Space to toggle selection, Enter to confirm, Esc to cancel
-   - Recommended skills float to the top with a ★ badge
-   - Skills from taps show a `(tapname)` attribution badge
-   - PgUp/PgDn to page through results
+- Type to filter by name, description, or tag in real time
+- ↑↓ to navigate, Space to toggle selection, Enter to confirm, Esc to cancel
+- **Ctrl+A** to select or deselect all currently filtered skills
+- Recommended skills (matched by project tags) float to the top with a ★ badge
+- Skills from taps show a source attribution badge
+- PgUp/PgDn to page through results; Tab to show/hide tap skills
 
 Use `--search` or `--tag` flags to pre-populate the filter.
 
@@ -225,7 +226,7 @@ lorex uninstall                    # interactive picker
 | `--all` | Remove every installed skill without prompting. |
 | `-g`, `--global` | Operate on the global lorex config (`~/.lorex/`) instead of the current project. |
 
-Running with no arguments opens a multi-select picker showing all installed skills.
+Running with no arguments opens the full-screen TUI picker showing all installed skills. Type to filter, Space to toggle, Ctrl+A to select all (filtered), Enter to confirm.
 
 ### What it removes
 
@@ -415,7 +416,7 @@ Only skills with link type `local` (real directories, not symlinks) can be publi
 
 ### Interactive mode
 
-Running `lorex publish` with no arguments opens a multi-select picker showing only local, unpublished skills. You can select one or more.
+Running `lorex publish` with no arguments opens the full-screen TUI picker showing only local (unpublished) skills. Type to filter, Space to toggle, Ctrl+A to select all, Enter to confirm.
 
 ### Behavior by policy
 

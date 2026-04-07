@@ -37,12 +37,14 @@ lorex/
 │   │   ├── CreateCommand.cs            ← also aliased as "generate"
 │   │   ├── PublishCommand.cs
 │   │   ├── RefreshCommand.cs
-│   │   └── RegistryCommand.cs
+│   │   ├── RegistryCommand.cs
+│   │   └── TapCommand.cs
 │   ├── Cli/
 │   │   ├── ServiceFactory.cs
 │   │   ├── RegistryCommandSupport.cs
 │   │   ├── RegistryPolicyPrompts.cs
-│   │   └── SkillOverwritePrompts.cs
+│   │   ├── SkillOverwritePrompts.cs
+│   │   └── SkillPickerTui.cs           ← full-screen TUI for install/uninstall/publish
 │   ├── Core/
 │   │   ├── Adapters/
 │   │   │   ├── AdapterProjection.cs
@@ -63,9 +65,10 @@ lorex/
 │   │   │   ├── BuiltInSkillService.cs      ← seeds built-in skills from embedded Resources/
 │   │   │   ├── RegistryService.cs          ← registry cache, skill discovery (flat + nested layouts)
 │   │   │   ├── RegistrySkillQueryService.cs← filters available/recommended skills for a project
+│   │   │   ├── TapService.cs               ← tap clone cache and skill discovery
 │   │   │   ├── ProjectRootLocator.cs       ← resolves nearest lorex project root from any subdirectory
 │   │   │   ├── GlobalRootLocator.cs        ← resolves ~/.lorex for --global operations
-│   │   │   ├── GitService.cs               ← git slug for project-tag recommendation
+│   │   │   ├── GitService.cs               ← git operations; accepts local paths and file:// URIs
 │   │   │   └── WindowsDevModeHelper.cs     ← checks/enables Windows Developer Mode for symlinks
 │   │   ├── Models/
 │   │   │   ├── LorexConfig.cs          ← .lorex/lorex.json: registry, adapters, installedSkills
@@ -82,6 +85,13 @@ lorex/
 │   └── Resources/
 │       └── lorex.md                    ← embedded built-in lorex skill (must stay identical to .lorex/skills/lorex/SKILL.md)
 ├── tests/Lorex.Tests/
+│   ├── Integration/
+│   │   ├── LorexTestHarness.cs         ← IDisposable sandbox: isolated temp dirs, local git registries
+│   │   ├── IntegrationCollection.cs    ← xUnit collection: DisableParallelization (shared AnsiConsole)
+│   │   ├── LocalOnlyFlowTests.cs       ← init, create, status, refresh — no registry
+│   │   ├── RegistryFlowTests.cs        ← init with registry, install, sync, publish
+│   │   ├── TapFlowTests.cs             ← tap add / list / sync, install from tap
+│   │   └── GlobalFlowTests.cs          ← --global flag flows, project/global independence
 │   ├── AdapterServiceTests.cs
 │   ├── SkillServiceTests.cs
 │   ├── RegistryServiceTests.cs
@@ -283,7 +293,8 @@ The `docs/` directory is a VitePress site published at https://alirezanet.github
 
 ## Pitfalls
 
-- `Spectre.Console` markup uses `[tag]`; escape literal brackets as `[[`.
+- `Spectre.Console` markup uses `[tag]`; escape literal brackets as `[[`. Do not use `[` or `]` in strings passed to `AddChoices`, `SelectionPrompt`, or `MultiSelectionPrompt` — they will be parsed as markup and cause a crash.
+- Integration tests set the `LOREX_HOME_OVERRIDE` environment variable to redirect all lorex home operations (`~/.lorex/cache`, `~/.lorex/taps`, `~/.lorex/config.json`) to a temp directory. Tests are serialized via `[Collection("Integration")]` + `DisableParallelization = true` because `AnsiConsole` is a static singleton. Never make integration tests parallel.
 - Do not hard-code Windows-only or Unix-only path expectations in tests; use `Path.Combine`, `Path.GetFullPath`, and platform-neutral assertions.
 - Do not regress the symlink-only behavior when editing projection code.
 - Native skill-folder projections are considered Lorex-managed only when the target entry is a symlink into `.lorex/skills`.
