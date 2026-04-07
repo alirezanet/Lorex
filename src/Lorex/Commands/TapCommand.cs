@@ -24,21 +24,24 @@ public static class TapCommand
         };
     }
 
-    // ── lorex tap add <url> [--name <name>] [--root <path>] ──────────────────
+    // ── lorex tap add <url> [--name <name>] [--root <path>] [--global] ───────
 
     private static int Add(string[] args)
     {
-        var url = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
+        var isGlobal = WantsGlobal(args);
+        var url = args.FirstOrDefault(a => !a.StartsWith("-", StringComparison.Ordinal));
         if (string.IsNullOrWhiteSpace(url))
         {
-            AnsiConsole.MarkupLine("[red]Usage:[/] lorex tap add [bold]<url>[/] [[bold]--name <name>[/]] [[bold]--root <path>[/]]");
+            AnsiConsole.MarkupLine("[red]Usage:[/] lorex tap add [bold]<url>[/] [[bold]--name <name>[/]] [[bold]--root <path>[/]] [[bold]--global[/]]");
             return 1;
         }
 
         var name = ArgParser.FlagValue(args, "--name") ?? DeriveNameFromUrl(url);
         var root = ArgParser.FlagValue(args, "--root");
 
-        var projectRoot = ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
+        var projectRoot = isGlobal
+            ? GlobalRootLocator.ResolveForExistingGlobal()
+            : ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
 
         try
         {
@@ -63,18 +66,21 @@ public static class TapCommand
         }
     }
 
-    // ── lorex tap remove <name> ───────────────────────────────────────────────
+    // ── lorex tap remove <name> [--global] ───────────────────────────────────
 
     private static int Remove(string[] args)
     {
-        var name = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
+        var isGlobal = WantsGlobal(args);
+        var name = args.FirstOrDefault(a => !a.StartsWith("-", StringComparison.Ordinal));
         if (string.IsNullOrWhiteSpace(name))
         {
-            AnsiConsole.MarkupLine("[red]Usage:[/] lorex tap remove [bold]<name>[/]");
+            AnsiConsole.MarkupLine("[red]Usage:[/] lorex tap remove [bold]<name>[/] [[bold]--global[/]]");
             return 1;
         }
 
-        var projectRoot = ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
+        var projectRoot = isGlobal
+            ? GlobalRootLocator.ResolveForExistingGlobal()
+            : ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
 
         try
         {
@@ -90,11 +96,14 @@ public static class TapCommand
         }
     }
 
-    // ── lorex tap list ────────────────────────────────────────────────────────
+    // ── lorex tap list [--global] ─────────────────────────────────────────────
 
-    private static int List(string[] _)
+    private static int List(string[] args)
     {
-        var projectRoot = ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
+        var isGlobal = WantsGlobal(args);
+        var projectRoot = isGlobal
+            ? GlobalRootLocator.ResolveForExistingGlobal()
+            : ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
 
         try
         {
@@ -137,12 +146,15 @@ public static class TapCommand
         }
     }
 
-    // ── lorex tap sync [<name>] ───────────────────────────────────────────────
+    // ── lorex tap sync [<name>] [--global] ───────────────────────────────────
 
     private static int Sync(string[] args)
     {
-        var tapName = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
-        var projectRoot = ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
+        var isGlobal = WantsGlobal(args);
+        var tapName = args.FirstOrDefault(a => !a.StartsWith("-", StringComparison.Ordinal));
+        var projectRoot = isGlobal
+            ? GlobalRootLocator.ResolveForExistingGlobal()
+            : ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
 
         try
         {
@@ -192,17 +204,24 @@ public static class TapCommand
         }
     }
 
+    // ── Global flag ───────────────────────────────────────────────────────────
+
+    internal static bool WantsGlobal(string[] args) =>
+        args.Any(a => string.Equals(a, "--global", StringComparison.OrdinalIgnoreCase) ||
+                      string.Equals(a, "-g",       StringComparison.OrdinalIgnoreCase));
+
     // ── Help ──────────────────────────────────────────────────────────────────
 
     private static int PrintHelp()
     {
         AnsiConsole.MarkupLine("[bold]lorex tap[/] — manage read-only skill sources");
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("  [bold deepskyblue3]add[/]     [grey]<url> [[--name <name>]] [[--root <path>]][/]  Add a tap");
-        AnsiConsole.MarkupLine("  [bold deepskyblue3]remove[/]  [grey]<name>[/]                                     Remove a tap");
-        AnsiConsole.MarkupLine("  [bold deepskyblue3]list[/]                                                List configured taps");
-        AnsiConsole.MarkupLine("  [bold deepskyblue3]sync[/]    [grey][[<name>]][/]                                 Pull latest from taps");
+        AnsiConsole.MarkupLine("  [bold deepskyblue3]add[/]     [grey]<url> [[--name <name>]] [[--root <path>]] [[-g|--global]][/]  Add a tap");
+        AnsiConsole.MarkupLine("  [bold deepskyblue3]remove[/]  [grey]<name> [[-g|--global]][/]                                     Remove a tap");
+        AnsiConsole.MarkupLine("  [bold deepskyblue3]list[/]    [grey][[-g|--global]][/]                                            List configured taps");
+        AnsiConsole.MarkupLine("  [bold deepskyblue3]sync[/]    [grey][[<name>]] [[-g|--global]][/]                                 Pull latest from taps");
         AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("[dim]Use [bold]-g[/] / [bold]--global[/] to operate on the global lorex config ([bold]~/.lorex/[/]) instead of the current project.[/]");
         AnsiConsole.MarkupLine("[dim]Skills from taps appear in [bold]lorex list[/] and [bold]lorex install[/] alongside registry skills.[/]");
         return 0;
     }

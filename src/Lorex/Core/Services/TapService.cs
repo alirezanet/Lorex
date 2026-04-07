@@ -33,14 +33,18 @@ public sealed class TapService(GitService git)
 
         var sameName = config.Taps.FirstOrDefault(t =>
             string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
-        if (sameName is not null)
-            throw new InvalidOperationException(
-                $"A tap named '{name}' already exists (url: {sameName.Url}). " +
-                $"Remove it first: lorex tap remove {name}");
 
         var sameUrl = config.Taps.FirstOrDefault(t =>
             string.Equals(NormalizeUrl(t.Url), NormalizeUrl(url), StringComparison.OrdinalIgnoreCase));
-        if (sameUrl is not null)
+
+        // Same name, different URL → real conflict
+        if (sameName is not null && !string.Equals(NormalizeUrl(sameName.Url), NormalizeUrl(url), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                $"A tap named '{name}' already exists with a different URL ({sameName.Url}). " +
+                $"Remove it first: lorex tap remove {name}");
+
+        // Same URL, different name → real conflict
+        if (sameUrl is not null && !string.Equals(sameUrl.Name, name, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException(
                 $"This URL is already registered as tap '{sameUrl.Name}'.");
 
@@ -54,6 +58,20 @@ public sealed class TapService(GitService git)
                 $"No skills found in '{url}'. " +
                 $"Ensure the repository contains directories with SKILL.md files. " +
                 $"If skills are in a subdirectory use --root <path>.");
+
+        // Same name + same URL → idempotent: update root if it changed, otherwise no-op
+        if (sameName is not null)
+        {
+            if (!string.Equals(sameName.Root, root, StringComparison.OrdinalIgnoreCase))
+            {
+                var updated = config.Taps.Select(t =>
+                    string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase)
+                        ? t with { Root = root }
+                        : t).ToArray();
+                skillService.WriteConfig(projectRoot, config with { Taps = updated });
+            }
+            return skills;
+        }
 
         var tap = new TapConfig { Name = name, Url = url, Root = root };
         skillService.WriteConfig(projectRoot, config with { Taps = [.. config.Taps, tap] });
