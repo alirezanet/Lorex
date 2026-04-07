@@ -15,7 +15,7 @@ public sealed class TapFlowTests
 
         Assert.Equal(0, exit);
         var config = h.ReadConfig();
-        Assert.Contains(config.Taps, t => t.Name == "my-tap");
+        Assert.Single(config.Taps, t => t.Name == "my-tap");
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public sealed class TapFlowTests
         Assert.Equal(0, exit);
         var config = h.ReadConfig();
         // Should still have exactly one tap with this name
-        Assert.Single(config.Taps.Where(t => t.Name == "my-tap"));
+        Assert.Single(config.Taps, t => t.Name == "my-tap");
     }
 
     [Fact]
