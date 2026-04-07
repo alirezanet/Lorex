@@ -22,11 +22,6 @@ You write it once. Every tool picks it up.
 
 Skills can be installed from a team registry or any public Git repository. If your organization already has a registry, one command gets you everything your teammates use. If not, community tap sources let you pull in skills for popular frameworks, tools, or workflows that others have already written.
 
-```bash
-lorex tap add https://github.com/org/skills  # connect any public repo as a skill source
-lorex install                          # browse and install from your registry or public skill source
-```
-
 ## For solo developers
 
 You write a skill (or ask your AI to write it for you). From that point on, every AI session in this project starts with that context already loaded. No more copy-pasting your conventions into every chat.
