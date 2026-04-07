@@ -114,6 +114,54 @@ public sealed class SimpleYamlParserTests
         Assert.Equal("some desc", dict["description"]);
     }
 
+    [Fact]
+    public void ParseToDictionary_DoubleQuotedValue_StripsQuotes()
+    {
+        const string yaml = """
+            name: my-skill
+            description: "The description is here"
+            """;
+
+        var dict = SimpleYamlParser.ParseToDictionary(yaml);
+
+        Assert.Equal("The description is here", dict["description"]);
+    }
+
+    [Fact]
+    public void ParseToDictionary_SingleQuotedValue_StripsQuotes()
+    {
+        const string yaml = """
+            name: my-skill
+            description: 'The description is here'
+            """;
+
+        var dict = SimpleYamlParser.ParseToDictionary(yaml);
+
+        Assert.Equal("The description is here", dict["description"]);
+    }
+
+    [Fact]
+    public void ParseToDictionary_FoldedBlockScalar_JoinsLines()
+    {
+        const string yaml = "name: my-skill\ndescription: >-\n  A multi-word description\n  that spans two lines\nversion: 1.0.0";
+
+        var dict = SimpleYamlParser.ParseToDictionary(yaml);
+
+        Assert.Equal("A multi-word description that spans two lines", dict["description"]);
+        Assert.Equal("1.0.0", dict["version"]);
+    }
+
+    [Fact]
+    public void ParseToDictionary_LiteralBlockScalar_JoinsLines()
+    {
+        const string yaml = "name: my-skill\ndescription: |-\n  A literal description\n  on two lines\nversion: 1.0.0";
+
+        var dict = SimpleYamlParser.ParseToDictionary(yaml);
+
+        Assert.Equal("A literal description on two lines", dict["description"]);
+        Assert.Equal("1.0.0", dict["version"]);
+    }
+
     // ── Frontmatter ───────────────────────────────────────────────────────────
 
     [Fact]

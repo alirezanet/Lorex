@@ -63,20 +63,48 @@ public static class SimpleYamlParser
     public static Dictionary<string, string> ParseToDictionary(string yaml)
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var lines  = yaml.Split('\n');
 
-        foreach (var rawLine in yaml.AsSpan().EnumerateLines())
+        for (var i = 0; i < lines.Length; i++)
         {
-            var line = rawLine.Trim();
+            var line = lines[i].Trim();
 
-            if (line.IsEmpty || line[0] == '#')
+            if (line.Length == 0 || line[0] == '#')
                 continue;
 
             var colonIndex = line.IndexOf(':');
             if (colonIndex <= 0)
                 continue;
 
-            var key = line[..colonIndex].Trim().ToString();
-            var value = line[(colonIndex + 1)..].Trim().ToString();
+            var key   = line[..colonIndex].Trim();
+            var value = line[(colonIndex + 1)..].Trim();
+
+            // Handle YAML block scalars: >- (folded-strip), >  (folded), |- (literal-strip), | (literal)
+            // Collect all following indented lines and join them into a single string.
+            if (value is ">" or ">-" or "|" or "|-")
+            {
+                var blockLines = new List<string>();
+                while (i + 1 < lines.Length)
+                {
+                    var next = lines[i + 1];
+                    // Block content lines start with whitespace (at least one space/tab)
+                    if (next.Length > 0 && (next[0] == ' ' || next[0] == '\t'))
+                    {
+                        blockLines.Add(next.Trim());
+                        i++;
+                    }
+                    else break;
+                }
+                value = string.Join(" ", blockLines);
+            }
+
+            // Strip surrounding double or single quotes from scalar values
+            if (value.Length >= 2
+                && ((value[0] == '"'  && value[^1] == '"')
+                 || (value[0] == '\'' && value[^1] == '\'')))
+            {
+                value = value[1..^1];
+            }
 
             result[key] = value;
         }

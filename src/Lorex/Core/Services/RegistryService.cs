@@ -127,7 +127,7 @@ public sealed class RegistryService(GitService git)
             {
                 var json = File.ReadAllText(indexPath);
                 var index = System.Text.Json.JsonSerializer.Deserialize(json, LorexJsonContext.Default.SkillMetadataArray);
-                if (index is { Length: > 0 })
+                if (index is { Length: > 0 } && !HasStaleDescriptions(index))
                     return index;
             }
             catch { /* fall through to full directory scan */ }
@@ -278,6 +278,14 @@ public sealed class RegistryService(GitService git)
         try { File.WriteAllText(Path.Combine(cacheDir, SyncTimestampFileName), DateTime.UtcNow.ToString("O")); }
         catch { /* best-effort */ }
     }
+
+    /// <summary>
+    /// Returns true if any skill in the index has a description that looks like an unparsed
+    /// YAML block scalar indicator (">", ">-", "|", "|-"). This indicates the index was built
+    /// by an older version of the parser and should be discarded.
+    /// </summary>
+    private static bool HasStaleDescriptions(SkillMetadata[] index) =>
+        Array.Exists(index, s => s.Description is ">" or ">-" or "|" or "|-");
 
     private static void RebuildSkillIndex(string cacheDir)
     {
