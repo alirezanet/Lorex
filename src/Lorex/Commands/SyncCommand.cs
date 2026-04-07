@@ -12,7 +12,9 @@ public static class SyncCommand
     /// <summary>Runs the command. Returns 0 on success, 1 on failure.</summary>
     public static int Run(string[] args)
     {
-        var isGlobal = args.Any(a => string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase));
+        var isGlobal = args.Any(a =>
+            string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(a, "-g",       StringComparison.OrdinalIgnoreCase));
 
         if (isGlobal && OperatingSystem.IsWindows() && !WindowsDevModeHelper.IsSymlinkAvailable())
         {
@@ -39,6 +41,24 @@ public static class SyncCommand
                 Lorex.Core.Models.LorexConfig refreshedConfig;
                 if (!RegistryCommandSupport.TryRefreshConfiguredRegistry(projectRoot, out refreshedConfig, "Refreshing registry...", forceRefresh: true))
                     return 1;
+
+                // ── Remove skills deleted from the registry ───────────────────
+                // Broken symlinks with no registry source are never recoverable — always clean up.
+                var staleSkills = ServiceFactory.Skills.FindStaleRegistrySkills(projectRoot);
+                if (staleSkills.Count > 0)
+                {
+                    foreach (var skillName in staleSkills)
+                        ServiceFactory.Skills.UninstallSkill(projectRoot, skillName);
+
+                    // Clean up adapter projections for removed skills immediately.
+                    ServiceFactory.Adapters.Project(projectRoot, ServiceFactory.Skills.ReadConfig(projectRoot));
+
+                    AnsiConsole.MarkupLine(
+                        "[yellow]Removed {0} stale skill{1} (deleted from registry):[/]",
+                        staleSkills.Count, staleSkills.Count == 1 ? "" : "s");
+                    foreach (var skillName in staleSkills)
+                        AnsiConsole.MarkupLine("  [dim]•[/] {0}", Markup.Escape(skillName));
+                }
 
                 var overwriteCandidates = refreshedConfig.InstalledSkills
                     .Where(skillName =>

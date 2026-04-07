@@ -12,12 +12,19 @@ public static class ListCommand
     private const string TagFlag      = "--tag";
     private const string PageFlag     = "--page";
     private const string PageSizeFlag = "--page-size";
+    private const string GlobalFlag   = "--global";
     private const int    DefaultPageSize = 25;
 
     /// <summary>Runs the command. Returns 0 on success, 1 on failure.</summary>
     public static int Run(string[] args)
     {
-        var projectRoot = ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
+        var isGlobal = args.Any(a =>
+            string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(a, "-g",       StringComparison.OrdinalIgnoreCase));
+
+        var projectRoot = isGlobal
+            ? GlobalRootLocator.ResolveForExistingGlobal()
+            : ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
 
         try
         {
@@ -57,7 +64,9 @@ public static class ListCommand
 
             var installed = new HashSet<string>(config.InstalledSkills, StringComparer.OrdinalIgnoreCase);
             var installedVersions = config.InstalledSkillVersions;
-            var recommended = ServiceFactory.RegistrySkills.GetRecommendedSkillNames(projectRoot, available, config);
+            var recommended = isGlobal
+                ? []
+                : ServiceFactory.RegistrySkills.GetRecommendedSkillNames(projectRoot, available, config);
             var recommendedSet = recommended.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             // Launch interactive TUI when stdout is a terminal and no pagination flags given

@@ -7,17 +7,28 @@ namespace Lorex.Commands;
 /// <summary>Implements <c>lorex status</c>: shows the current project's registry, adapters, and installed skill link states.</summary>
 public static class StatusCommand
 {
+    private const string GlobalFlag = "--global";
+
     /// <summary>Runs the command. Returns 0 on success, 1 on failure.</summary>
     public static int Run(string[] args)
     {
-        var projectRoot = ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
+        var isGlobal = args.Any(a =>
+            string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(a, "-g",       StringComparison.OrdinalIgnoreCase));
+
+        var projectRoot = isGlobal
+            ? GlobalRootLocator.ResolveForExistingGlobal()
+            : ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
 
         try
         {
             var config = ServiceFactory.Skills.ReadConfig(projectRoot);
 
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[bold]Project:[/] [dim]{0}[/]", Markup.Escape(projectRoot));
+            if (isGlobal)
+                AnsiConsole.MarkupLine("[bold]Global root:[/] [dim]{0}[/]", Markup.Escape(projectRoot));
+            else
+                AnsiConsole.MarkupLine("[bold]Project:[/] [dim]{0}[/]", Markup.Escape(projectRoot));
             AnsiConsole.MarkupLine("[bold]Registry:[/] [dim]{0}[/]", config.Registry is null ? "(none — local-only mode)" : Markup.Escape(config.Registry.Url));
             if (config.Registry is not null)
             {
@@ -80,6 +91,8 @@ public static class StatusCommand
             if (config.InstalledSkills.Length == 0)
             {
                 AnsiConsole.MarkupLine("[dim]No skills installed. Run [bold]lorex list[/] to browse available skills.[/]");
+                if (!isGlobal)
+                    PrintGlobalHint();
                 return 0;
             }
 
@@ -103,12 +116,34 @@ public static class StatusCommand
             AnsiConsole.Write(table);
             AnsiConsole.MarkupLine(
                 "[dim]Run [bold]lorex sync[/] to pull the latest versions, or [bold]lorex list[/] to browse.[/]");
+
+            if (!isGlobal)
+                PrintGlobalHint();
+
             return 0;
         }
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine("[red]Error:[/] {0}", Markup.Escape(ex.Message));
             return 1;
+        }
+    }
+
+    private static void PrintGlobalHint()
+    {
+        try
+        {
+            var globalRoot = GlobalRootLocator.GetGlobalRoot();
+            var globalConfig = ServiceFactory.Skills.ReadConfig(globalRoot);
+            var count = globalConfig.InstalledSkills.Length;
+            if (count > 0)
+                AnsiConsole.MarkupLine(
+                    "[dim]{0} global skill{1} also active — run [bold]lorex status --global[/] to view.[/]",
+                    count, count == 1 ? "" : "s");
+        }
+        catch
+        {
+            // Global lorex not initialised — no hint needed
         }
     }
 

@@ -7,14 +7,21 @@ namespace Lorex.Commands;
 /// <summary>Implements <c>lorex uninstall &lt;skill&gt;</c>: removes an installed skill from the current project.</summary>
 public static class UninstallCommand
 {
-    private const string AllFlag = "--all";
-    private const string PromptUninstallAll = "Uninstall all installed skills";
+    private const string AllFlag    = "--all";
+    private const string GlobalFlag = "--global";
+    private const string PromptUninstallAll   = "Uninstall all installed skills";
     private const string PromptChooseSpecific = "Choose specific skills";
 
     /// <summary>Runs the command. Returns 0 on success, 1 on failure.</summary>
     public static int Run(string[] args)
     {
-        var projectRoot = ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
+        var isGlobal = args.Any(a =>
+            string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(a, "-g",       StringComparison.OrdinalIgnoreCase));
+
+        var projectRoot = isGlobal
+            ? GlobalRootLocator.ResolveForExistingGlobal()
+            : ProjectRootLocator.ResolveForExistingProject(Directory.GetCurrentDirectory());
 
         try
         {
@@ -83,7 +90,8 @@ public static class UninstallCommand
 
     internal static List<string> ParseSkillNames(string[] args) =>
         [.. args
-            .Where(a => !string.IsNullOrWhiteSpace(a) && !string.Equals(a, AllFlag, StringComparison.OrdinalIgnoreCase))
+            .Where(a => !string.IsNullOrWhiteSpace(a)
+                     && !a.StartsWith("-", StringComparison.Ordinal))
             .Distinct(StringComparer.OrdinalIgnoreCase)];
 
     internal static List<string> GetInstalledSkillNames(Core.Models.LorexConfig config) =>
