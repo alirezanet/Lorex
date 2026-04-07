@@ -23,7 +23,7 @@ export default defineConfig({
     siteTitle: 'Lorex',
 
     nav: [
-      { text: 'Guide', link: '/guide/getting-started', activeMatch: '/guide/' },
+      { text: 'Guide', link: '/guide/introduction', activeMatch: '/guide/' },
       { text: 'Reference', link: '/reference/commands', activeMatch: '/reference/' },
       { text: 'Contributing', link: '/contributing' },
       {
@@ -41,6 +41,7 @@ export default defineConfig({
         {
           text: 'Introduction',
           items: [
+            { text: 'Introduction', link: '/guide/introduction' },
             { text: 'Getting Started', link: '/guide/getting-started' },
             { text: 'Core Concepts', link: '/guide/concepts' },
             { text: 'How It Works', link: '/guide/how-it-works' },
