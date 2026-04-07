@@ -8,12 +8,15 @@ namespace Lorex.Commands;
 /// <summary>Implements <c>lorex install [skill…]</c>: installs one or more skills from the registry into the current project.</summary>
 public static class InstallCommand
 {
-    private const string AllFlag = "--all";
+    private const string AllFlag         = "--all";
     private const string RecommendedFlag = "--recommended";
-    private const string GlobalFlag = "--global";
+    private const string GlobalFlag      = "--global";
+    private const string SearchFlag      = "--search";
+    private const string TagFlag         = "--tag";
+
     private const string PromptInstallRecommended = "Install recommended skills";
-    private const string PromptInstallAll = "Install all available skills";
-    private const string PromptChooseSpecific = "Choose specific skills";
+    private const string PromptInstallAll         = "Install all available skills";
+    private const string PromptChooseSpecific     = "Choose specific skills";
 
     /// <summary>Runs the command. Returns 0 on success, 1 on failure.</summary>
     public static int Run(string[] args)
@@ -35,9 +38,11 @@ public static class InstallCommand
             if (!RegistryCommandSupport.TryReadConfiguredRegistry(projectRoot, out var cfg))
                 return 1;
 
-            var installAll = WantsAll(args);
+            var installAll         = WantsAll(args);
             var installRecommended = WantsRecommended(args);
-            var requestedSkills = ParseSkillNames(args);
+            var requestedSkills    = ParseSkillNames(args);
+            var search             = ParseSearch(args);
+            var tag                = ParseTag(args);
 
             if ((installAll || installRecommended) && requestedSkills.Count > 0)
             {
@@ -57,12 +62,12 @@ public static class InstallCommand
 
             if (installAll)
             {
-                available = FetchAvailableSkills(cfg);
+                available       = FetchAvailableSkills(cfg);
                 requestedSkills = ServiceFactory.RegistrySkills.GetInstallableSkillNames(available, cfg);
             }
             else if (installRecommended)
             {
-                available = FetchAvailableSkills(cfg);
+                available       = FetchAvailableSkills(cfg);
                 requestedSkills = ServiceFactory.RegistrySkills.GetRecommendedSkillNames(projectRoot, available, cfg);
 
                 if (requestedSkills.Count == 0)
@@ -73,7 +78,7 @@ public static class InstallCommand
             }
             else if (requestedSkills.Count == 0)
             {
-                requestedSkills = PromptForSkills(projectRoot, cfg);
+                requestedSkills = PromptForSkills(projectRoot, cfg, search, tag);
             }
 
             if (requestedSkills.Count == 0)
@@ -108,9 +113,7 @@ public static class InstallCommand
                 });
 
             foreach (var skillName in approvedSkills)
-            {
                 AnsiConsole.MarkupLine($"[green]✓[/] Installed [bold]{skillName}[/] [dim](symlinked)[/]");
-            }
 
             foreach (var skillName in skippedSkills)
                 AnsiConsole.MarkupLine("[yellow]Skipped[/] [bold]{0}[/] [dim](kept existing local skill)[/]", skillName);
@@ -138,16 +141,34 @@ public static class InstallCommand
     internal static bool WantsGlobal(string[] args) =>
         args.Any(a => string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase));
 
-    internal static List<string> ParseSkillNames(string[] args) =>
-        [.. args
-            .Where(a =>
-                !string.IsNullOrWhiteSpace(a)
-                && !string.Equals(a, AllFlag, StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(a, RecommendedFlag, StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)];
+    internal static string? ParseSearch(string[] args) => ArgParser.FlagValue(args, SearchFlag);
+    internal static string? ParseTag(string[] args)    => ArgParser.FlagValue(args, TagFlag);
 
-    private static List<string> PromptForSkills(string projectRoot, LorexConfig cfg)
+    /// <summary>
+    /// Returns the skill names from <paramref name="args"/>, excluding all flags (any arg starting with <c>--</c>)
+    /// and the value arguments that follow value-carrying flags (<c>--search</c>, <c>--tag</c>).
+    /// </summary>
+    internal static List<string> ParseSkillNames(string[] args)
+    {
+        var result = new List<string>();
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            if (string.IsNullOrWhiteSpace(arg)) continue;
+            if (IsValueFlag(arg)) { i++; continue; }  // skip flag and its value
+            if (arg.StartsWith("--", StringComparison.Ordinal)) continue;
+            result.Add(arg);
+        }
+        return [.. result.Distinct(StringComparer.OrdinalIgnoreCase)];
+    }
+
+    private static bool IsValueFlag(string arg) =>
+        string.Equals(arg, SearchFlag, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(arg, TagFlag,    StringComparison.OrdinalIgnoreCase);
+
+    private static List<string> PromptForSkills(
+        string projectRoot, LorexConfig cfg,
+        string? preSearch, string? preTag)
     {
         var available = FetchAvailableSkills(cfg);
         if (available.Count == 0)
@@ -157,10 +178,9 @@ public static class InstallCommand
         }
 
         var installableNames = ServiceFactory.RegistrySkills.GetInstallableSkillNames(available, cfg);
-        var installableSet = installableNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var installableSet   = installableNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var choices = available
             .Where(skill => installableSet.Contains(skill.Name))
-            .OrderBy(skill => skill.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         if (choices.Count == 0)
@@ -170,7 +190,8 @@ public static class InstallCommand
             return [];
         }
 
-        var recommended = ServiceFactory.RegistrySkills.GetRecommendedSkillNames(projectRoot, available, cfg);
+        var recommended    = ServiceFactory.RegistrySkills.GetRecommendedSkillNames(projectRoot, available, cfg);
+        var recommendedSet = recommended.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var selectionMode = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
@@ -185,20 +206,9 @@ public static class InstallCommand
         if (string.Equals(selectionMode, PromptInstallAll, StringComparison.Ordinal))
             return [.. choices.Select(skill => skill.Name)];
 
-        var selected = AnsiConsole.Prompt(
-            new MultiSelectionPrompt<SkillMetadata>()
-                .Title("[bold]Which skills do you want to install?[/]")
-                .InstructionsText("[dim](Space to select, Enter to confirm)[/]")
-                .UseConverter(skill =>
-                {
-                    var description = string.IsNullOrWhiteSpace(skill.Description)
-                        ? string.Empty
-                        : $" [dim]- {Markup.Escape(skill.Description)}[/]";
-                    return $"[bold]{Markup.Escape(skill.Name)}[/]{description}";
-                })
-                .AddChoices(choices));
+        // ── "Choose specific skills" — full TUI picker ───────────────────────
 
-        return [.. selected.Select(skill => skill.Name)];
+        return SkillPickerTui.Run(choices, recommendedSet, preSearch, preTag);
     }
 
     private static IReadOnlyList<SkillMetadata> FetchAvailableSkills(LorexConfig cfg)

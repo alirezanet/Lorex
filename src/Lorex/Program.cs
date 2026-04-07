@@ -96,9 +96,9 @@ static int PrintHelp()
 
     Section("Registry", g =>
     {
-        Row(g, "install",   "[[<skill>…]] [[--all]] [[--recommended]] [[--global]]",  "Install skills from the registry, or choose interactively");
-        Row(g, "uninstall", "[[<skill>…]] [[--all]]",                                 "Remove installed skills, or choose interactively");
-        Row(g, "list",      "",                                                        "List skills available in the registry");
+        Row(g, "install",   "[[<skill>…]] [[--all]] [[--recommended]] [[--search <text>]] [[--tag <tag>]] [[--global]]",  "Install skills from the registry, or choose interactively");
+        Row(g, "uninstall", "[[<skill>…]] [[--all]]",                                                                               "Remove installed skills, or choose interactively");
+        Row(g, "list",      "[[--search <text>]] [[--tag <tag>]] [[--page <n>]] [[--page-size <n>]]",                               "Browse and filter skills available in the registry");
         Row(g, "sync",      "[[--global]]",                                            "Pull latest skill versions from the registry");
         Row(g, "publish",   "[[<skill>…]]",                                           "Push local skills to the registry");
         Row(g, "registry",  "",                                                        "Interactively configure the connected registry policy");

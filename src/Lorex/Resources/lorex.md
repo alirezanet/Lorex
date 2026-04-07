@@ -29,9 +29,9 @@ Lorex commands resolve the project root by walking up from the current working d
 |---|---|---|
 | `init` | `lorex init [<url>] [--local] [--global] [--adapters a,b]` | Set up lorex in a project (or globally with `--global`) and load or initialize the registry policy |
 | `create` | `lorex create [<name>] [-d desc] [-t tags] [-o owner]` | Scaffold a new local skill |
-| `install` | `lorex install [<skill>…] [--all] [--recommended] [--global]` | Install skills from the registry into this project or globally |
+| `install` | `lorex install [<skill>…] [--all] [--recommended] [--search <text>] [--tag <tag>] [--global]` | Install skills from the registry into this project or globally |
 | `uninstall` | `lorex uninstall [<skill>…] [--all]` | Remove installed skills from this project |
-| `list` | `lorex list` | Browse skills available in the registry |
+| `list` | `lorex list [--search <text>] [--tag <tag>] [--page <n>] [--page-size <n>]` | Browse and filter skills available in the registry |
 | `status` | `lorex status` | Show installed skills, registry state, and adapter targets |
 | `sync` | `lorex sync [--global]` | Pull the latest versions and registry policy from the registry |
 | `publish` | `lorex publish [<skill>…]` | Contribute local skills using the registry's publish policy |
@@ -48,7 +48,9 @@ Running `lorex init` with no arguments opens a guided setup flow:
 
 When a connected registry already has skills that this project does not have installed, `lorex init` finishes by pointing users to `lorex install --recommended` or `lorex list`, and reminds them to use `lorex sync` later to refresh installed shared skills.
 
-Running `lorex install` with no skill names opens an interactive flow where users can install recommended skills, install everything, or choose a subset. Recommendations are based on exact tag matches against the current repo slug like `owner/repo`, or the folder name if no git slug is available. `lorex uninstall` similarly supports `--all` or an interactive flow to remove all installed skills or choose a subset.
+Running `lorex install` with no skill names opens an interactive flow where users can install recommended skills, install everything, or choose a subset. If "Choose specific" is selected, lorex prompts for an optional search term, filters and sorts results (recommended first, marked with ★), then shows a scrollable multi-select (20 items visible at a time). Use `--search <text>` or `--tag <tag>` to pre-populate the search and skip the prompt. Recommendations are based on exact tag matches against the current repo slug like `owner/repo`, or the folder name if no git slug is available. `lorex uninstall` similarly supports `--all` or an interactive flow to remove all installed skills or choose a subset.
+
+`lorex list` supports `--search <text>`, `--tag <tag>`, `--page <n>`, and `--page-size <n>` (default 25; use 0 for all) to filter and paginate the registry skill table from the command line.
 
 If a registry install or sync would replace an existing local skill directory in `.lorex/skills`, lorex asks for explicit approval per skill before overwriting it.
 

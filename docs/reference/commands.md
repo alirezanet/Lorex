@@ -129,7 +129,7 @@ lorex create auth-logic -d "Token validation and session rules" -t "auth,securit
 Install one or more skills from the registry into this project.
 
 ```bash
-lorex install [<skill>...] [--all] [--recommended] [--global]
+lorex install [<skill>...] [--all] [--recommended] [--search <text>] [--tag <tag>] [--global]
 lorex install                      # interactive picker
 ```
 
@@ -140,6 +140,8 @@ lorex install                      # interactive picker
 | `<skill>...` | One or more skill names to install directly. |
 | `--all` | Install every skill in the registry that is not already installed. |
 | `--recommended` | Install only skills recommended for this project (matched by tags). |
+| `--search <text>` | Pre-filter the interactive skill picker to skills whose name, description, or tags contain `<text>`. Only applies when no skill names or `--all`/`--recommended` flags are given. |
+| `--tag <tag>` | Pre-filter the interactive skill picker to skills with the exact tag `<tag>`. Only applies in interactive mode. |
 | `--global` | Install into `~/.lorex/skills/` and project into user-level agent locations. Requires `lorex init --global` to have been run first. |
 
 `--all` and `--recommended` cannot be used together. Neither can be combined with explicit skill names.
@@ -149,7 +151,13 @@ lorex install                      # interactive picker
 Running `lorex install` with no arguments opens a two-step flow:
 
 1. Lorex fetches the registry and asks: **Install recommended / Install all / Choose specific**
-2. If you choose "Choose specific", a multi-select list lets you pick individual skills
+2. If you choose "Choose specific":
+   - Lorex prompts for an optional search term (press Enter to browse all)
+   - Results are filtered and sorted with recommended skills at the top
+   - A scrollable multi-select lets you pick individual skills (20 visible at a time, scroll with ↑↓)
+   - Recommended skills are marked with a ★ badge
+
+Use `--search` or `--tag` flags to pre-populate the search and skip the prompt.
 
 ### Recommended matching
 
@@ -209,20 +217,43 @@ Adapter projections for the removed skill are cleaned up on the next `lorex refr
 
 ## `lorex list`
 
-Browse all skills available in the connected registry.
+Browse and filter skills available in the connected registry.
 
 ```bash
-lorex list
+lorex list [--search <text>] [--tag <tag>] [--page <n>] [--page-size <n>]
+lorex list                         # first page, 25 skills
 ```
+
+### Flags
+
+| Flag | Description |
+| :--- | :--- |
+| `--search <text>` | Filter skills whose name, description, or tags contain `<text>` (case-insensitive). |
+| `--tag <tag>` | Filter skills with the exact tag `<tag>` (case-insensitive). Can be combined with `--search`. |
+| `--page <n>` | Page number to display (1-based, default: 1). |
+| `--page-size <n>` | Skills per page (default: 25). Use `0` to disable pagination and show all results. |
 
 Shows a table with columns: **Skill**, **Description**, **Version**, **Tags**, **Status**.
 
 Status values:
 - `installed` (green) — already in this project
+- `update available` (yellow) — installed but the registry has a newer version
 - `recommended` (blue) — not installed but tags match this project
 - `available` (dim) — available but not recommended
 
-Recommended skills appear at the top of the table.
+Recommended skills appear at the top of each page. A summary line shows `Showing X–Y of Z skills` and a pagination hint appears when there are more pages.
+
+### Examples
+
+```bash
+lorex list                         # first 25 skills
+lorex list --search auth           # filter by name/description/tag
+lorex list --tag dotnet            # skills tagged "dotnet"
+lorex list --page 2                # second page
+lorex list --page-size 50          # larger page
+lorex list --page-size 0           # all results, no pagination
+lorex list --search auth --page-size 0  # all matching results
+```
 
 ::: info Registry required
 `lorex list` requires a registry. In local-only mode it prints a message and exits.

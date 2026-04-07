@@ -54,6 +54,36 @@ public sealed class RegistrySkillQueryService(RegistryService registry, GitServi
             .Distinct(StringComparer.OrdinalIgnoreCase)];
     }
 
+    /// <summary>
+    /// Filters <paramref name="skills"/> by an optional full-text search term and/or an optional exact tag.
+    /// When both are supplied both conditions must hold.
+    /// </summary>
+    public IReadOnlyList<SkillMetadata> FilterBySearch(
+        IReadOnlyList<SkillMetadata> skills,
+        string? search,
+        string? tag)
+    {
+        IEnumerable<SkillMetadata> result = skills;
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim();
+            result = result.Where(skill =>
+                skill.Name.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                skill.Description.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                skill.Tags.Any(t => t.Contains(s, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            var t = tag.Trim();
+            result = result.Where(skill =>
+                skill.Tags.Contains(t, StringComparer.OrdinalIgnoreCase));
+        }
+
+        return [.. result];
+    }
+
     public bool IsRecommendedForProject(SkillMetadata skill, IReadOnlyCollection<string> projectTagKeys)
     {
         if (projectTagKeys.Count == 0 || skill.Tags.Length == 0)

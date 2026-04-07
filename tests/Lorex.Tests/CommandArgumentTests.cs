@@ -250,6 +250,186 @@ public sealed class CommandArgumentTests
         Assert.False(ListCommand.HasUpdate("2.0.0", versions, "auth"));
     }
 
+    // ── InstallCommand: ParseSkillNames excludes value-flag arguments ─────────
+
+    [Fact]
+    public void InstallCommand_ParseSkillNames_FiltersSearchFlagAndItsValue()
+    {
+        var parsed = InstallCommand.ParseSkillNames(["auth", "--search", "react", "api"]);
+
+        Assert.Equal(["auth", "api"], parsed);
+    }
+
+    [Fact]
+    public void InstallCommand_ParseSkillNames_FiltersTagFlagAndItsValue()
+    {
+        var parsed = InstallCommand.ParseSkillNames(["auth", "--tag", "dotnet", "api"]);
+
+        Assert.Equal(["auth", "api"], parsed);
+    }
+
+    // ── InstallCommand: ParseSearch / ParseTag ─────────────────────────────
+
+    [Fact]
+    public void InstallCommand_ParseSearch_ReturnsSearchValue()
+    {
+        Assert.Equal("react", InstallCommand.ParseSearch(["--search", "react"]));
+        Assert.Null(InstallCommand.ParseSearch(["auth"]));
+    }
+
+    [Fact]
+    public void InstallCommand_ParseTag_ReturnsTagValue()
+    {
+        Assert.Equal("dotnet", InstallCommand.ParseTag(["--tag", "dotnet"]));
+        Assert.Null(InstallCommand.ParseTag(["auth"]));
+    }
+
+    // ── ListCommand: flag parsing ──────────────────────────────────────────
+
+    [Fact]
+    public void ListCommand_ParseSearch_ReturnsSearchValue()
+    {
+        Assert.Equal("auth", ListCommand.ParseSearch(["--search", "auth"]));
+    }
+
+    [Fact]
+    public void ListCommand_ParseSearch_ReturnsNullWhenAbsent()
+    {
+        Assert.Null(ListCommand.ParseSearch([]));
+        Assert.Null(ListCommand.ParseSearch(["--tag", "dotnet"]));
+    }
+
+    [Fact]
+    public void ListCommand_ParseTag_ReturnsTagValue()
+    {
+        Assert.Equal("dotnet", ListCommand.ParseTag(["--tag", "dotnet"]));
+    }
+
+    [Fact]
+    public void ListCommand_ParsePage_DefaultsToOne()
+    {
+        Assert.Equal(1, ListCommand.ParsePage([]));
+        Assert.Equal(1, ListCommand.ParsePage(["--search", "x"]));
+    }
+
+    [Fact]
+    public void ListCommand_ParsePage_ReturnsSpecifiedValue()
+    {
+        Assert.Equal(3, ListCommand.ParsePage(["--page", "3"]));
+    }
+
+    [Fact]
+    public void ListCommand_ParsePageSize_DefaultsTwentyFive()
+    {
+        Assert.Equal(25, ListCommand.ParsePageSize([]));
+    }
+
+    [Fact]
+    public void ListCommand_ParsePageSize_ReturnsSpecifiedValue()
+    {
+        Assert.Equal(50, ListCommand.ParsePageSize(["--page-size", "50"]));
+        Assert.Equal(0, ListCommand.ParsePageSize(["--page-size", "0"]));  // 0 = show all
+    }
+
+    // ── RegistrySkillQueryService.FilterBySearch ───────────────────────────
+
+    [Fact]
+    public void RegistrySkillQueryService_FilterBySearch_ReturnsAllWhenBothNull()
+    {
+        var service = new RegistrySkillQueryService(new RegistryService(new GitService()), new GitService());
+        var skills = new[]
+        {
+            new SkillMetadata { Name = "auth", Description = "Auth" },
+            new SkillMetadata { Name = "api",  Description = "API"  },
+        };
+
+        var result = service.FilterBySearch(skills, null, null);
+
+        Assert.Equal(2, result.Count);
+    }
+
+    [Fact]
+    public void RegistrySkillQueryService_FilterBySearch_FiltersByName()
+    {
+        var service = new RegistrySkillQueryService(new RegistryService(new GitService()), new GitService());
+        var skills = new[]
+        {
+            new SkillMetadata { Name = "auth-logic",    Description = "Token validation" },
+            new SkillMetadata { Name = "api-standards", Description = "REST conventions" },
+        };
+
+        var result = service.FilterBySearch(skills, "auth", null);
+
+        Assert.Single(result);
+        Assert.Equal("auth-logic", result[0].Name);
+    }
+
+    [Fact]
+    public void RegistrySkillQueryService_FilterBySearch_FiltersByDescription()
+    {
+        var service = new RegistrySkillQueryService(new RegistryService(new GitService()), new GitService());
+        var skills = new[]
+        {
+            new SkillMetadata { Name = "auth",  Description = "Token validation and session rules" },
+            new SkillMetadata { Name = "build", Description = "CI pipeline setup" },
+        };
+
+        var result = service.FilterBySearch(skills, "session", null);
+
+        Assert.Single(result);
+        Assert.Equal("auth", result[0].Name);
+    }
+
+    [Fact]
+    public void RegistrySkillQueryService_FilterBySearch_FiltersByTagSubstring()
+    {
+        var service = new RegistrySkillQueryService(new RegistryService(new GitService()), new GitService());
+        var skills = new[]
+        {
+            new SkillMetadata { Name = "auth",  Description = "Auth",  Tags = ["security", "dotnet"] },
+            new SkillMetadata { Name = "build", Description = "Build", Tags = ["ci"]                 },
+        };
+
+        var result = service.FilterBySearch(skills, "secur", null);
+
+        Assert.Single(result);
+        Assert.Equal("auth", result[0].Name);
+    }
+
+    [Fact]
+    public void RegistrySkillQueryService_FilterBySearch_FiltersByExactTag()
+    {
+        var service = new RegistrySkillQueryService(new RegistryService(new GitService()), new GitService());
+        var skills = new[]
+        {
+            new SkillMetadata { Name = "auth",  Description = "Auth",  Tags = ["security", "dotnet"] },
+            new SkillMetadata { Name = "build", Description = "Build", Tags = ["ci", "dotnet"]       },
+            new SkillMetadata { Name = "api",   Description = "API",   Tags = ["rest"]               },
+        };
+
+        var result = service.FilterBySearch(skills, null, "dotnet");
+
+        Assert.Equal(2, result.Count);
+        Assert.DoesNotContain(result, s => s.Name == "api");
+    }
+
+    [Fact]
+    public void RegistrySkillQueryService_FilterBySearch_BothFiltersApplied()
+    {
+        var service = new RegistrySkillQueryService(new RegistryService(new GitService()), new GitService());
+        var skills = new[]
+        {
+            new SkillMetadata { Name = "auth",  Description = "Auth rules",  Tags = ["security", "dotnet"] },
+            new SkillMetadata { Name = "build", Description = "Build rules", Tags = ["dotnet"]             },
+        };
+
+        // search matches both by description ("rules"), but tag "security" only matches auth
+        var result = service.FilterBySearch(skills, "rules", "security");
+
+        Assert.Single(result);
+        Assert.Equal("auth", result[0].Name);
+    }
+
     [Fact]
     public void SkillService_RequiresOverwriteApproval_IsTrueForLocalDirectoryAndFalseForSymlink()
     {
