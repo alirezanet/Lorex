@@ -2,7 +2,7 @@
 
 ### The Shared Knowledge Registry for AI Agents and People
 
-**Stop repeating yourself to AI.** Lorex manages **skills** — Markdown files that teach your AI agents about your project's architecture, conventions, and rules — and keeps every tool automatically in sync.
+**Stop repeating yourself to AI.** Lorex manages **skills** (Markdown files that teach your AI agents about your project's architecture, conventions, and rules) and keeps every tool automatically in sync.
 
 Write a skill once. Lorex projects it into Claude, Cursor, Copilot, Gemini, Cline, Windsurf, Roo, and more. Connect a Git repository as your team registry and every developer and every repo stays current with a single `lorex sync`.
 
@@ -16,17 +16,17 @@ Write a skill once. Lorex projects it into Claude, Cursor, Copilot, Gemini, Clin
 
 ### ℹ️ Who Needs Lorex?
 
-  * **Multi-agent users:** You use Claude, Cursor, Copilot, or others — and you're tired of re-explaining the same project context to each one.
+  * **Multi-agent users:** You use Claude, Cursor, Copilot, or others and you're tired of re-explaining the same project context to each one.
   * **Teams:** You want a single, reviewed, version-controlled source of AI knowledge that every developer and every repo can pull from.
   * **Developers:** You have productive AI sessions and want to capture what worked as a reusable, shareable skill.
   * **Open-source maintainers:** You want contributors' AI agents to understand your project's conventions from day one.
 
 ### ⚡ Why Lorex?
 
-  * **Works with every agent:** Add a skill once. Lorex projects it into every AI tool's native location — no manual copying, no format translations.
+  * **Works with every agent:** Add a skill once. Lorex projects it into every AI tool's native location, with no manual copying or format translations.
   * **Shared team intelligence:** Build a central registry (any private Git repo) to share standards like `security-rules` or `api-conventions` across your entire organization. Publish once, sync everywhere.
   * **Community skill sources:** Pull skills from any public Git repository with `lorex tap add <url>`. Connect a framework team's collection, an open-source library's conventions, or a colleague's repo in one command.
-  * **No vendor lock-in:** Your knowledge lives in plain Markdown in your own Git repository — portable across any AI tool, today or tomorrow.
+  * **No vendor lock-in:** Your knowledge lives in plain Markdown in your own Git repository, portable across any AI tool, today or tomorrow.
   * **You stay in control:** No probabilistic retrieval, no black-box context injection. You decide exactly what your agents know and when it changes.
   * **Zero infrastructure:** No vector database, no API, no hosted service. Just a CLI and files.
   * **Instant install:** Single native binary. No runtime, no VM, starts in milliseconds on Windows, macOS, and Linux.
@@ -113,7 +113,7 @@ lorex install auth-logic
 
 ### 3\. Pull from community skill sources
 
-Connect any public Git repository as a read-only skill source — no registry setup needed.
+Connect any public Git repository as a read-only skill source with no registry setup needed.
 
 ```bash
 # Add a tap (clones the repo, discovers skills)
@@ -162,7 +162,7 @@ For agents that use rules or settings files instead of folders, Lorex generates 
   * **Roo** → `.roo/rules-code/`
   * **Gemini** → `.gemini/settings.json`
 
-Because projections are derived from the canonical skill store, your agents stay in sync without duplicating knowledge across multiple incompatible formats. Symlinked skills (registry and tap installs) are gitignored automatically — only your local skills and `lorex.json` need to be committed.
+Because projections are derived from the canonical skill store, your agents stay in sync without duplicating knowledge across multiple incompatible formats. Symlinked skills (registry and tap installs) are gitignored automatically. Only your local skills and `lorex.json` need to be committed.
 
 -----
 
@@ -172,7 +172,7 @@ Because projections are derived from the canonical skill store, your agents stay
 | :--- | :--- | :--- |
 | **Precision** | Probabilistic (can "hallucinate" context) | Explicit & human-verified |
 | **Versioning** | Hard to track in databases | Git-native (PRs, diffs, history) |
-| **Infrastructure** | Requires vector DB & API | Zero infra — just a CLI and files |
+| **Infrastructure** | Requires vector DB & API | Zero infra, just a CLI and files |
 | **Control** | "Black box" retrieval | You decide exactly what the agent knows |
 | **Sharing** | Per-tool, per-person | One registry, every agent, every teammate |
 
