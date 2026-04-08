@@ -177,6 +177,12 @@ public sealed class GitService
     public void CheckoutOrphan(string repoPath, string branchName) =>
         Run(repoPath, "checkout", "--orphan", branchName);
 
+    public string? TryGetRevision(string repoPath)
+    {
+        try { return Run(repoPath, "rev-parse", "HEAD").Trim(); }
+        catch (GitException) { return null; }
+    }
+
     public bool HasCommits(string repoPath)
     {
         try

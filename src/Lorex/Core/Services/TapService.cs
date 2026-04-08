@@ -125,10 +125,16 @@ public sealed class TapService(GitService git)
         var updated = new List<string>();
         foreach (var tap in config.Taps)
         {
+            var cachePath = GetTapCachePath(tap.Url);
+            var headBefore = git.TryGetRevision(cachePath);
+
             // EnsureCache clones the tap if not cached locally (e.g. fresh clone of a project
             // that uses this tap). forceRefresh: true pulls latest regardless of TTL.
             EnsureCache(tap.Url, forceRefresh: true);
-            updated.Add(tap.Name);
+
+            var headAfter = git.TryGetRevision(cachePath);
+            if (headBefore != headAfter)
+                updated.Add(tap.Name);
         }
         return updated;
     }

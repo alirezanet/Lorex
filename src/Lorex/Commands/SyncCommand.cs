@@ -71,6 +71,8 @@ public static class SyncCommand
                     overwriteCandidates,
                     skillName => $"Sync will replace local skill [bold]{Markup.Escape(skillName)}[/] with the registry version. Continue?");
 
+                var oldVersions = refreshedConfig.InstalledSkillVersions;
+
                 IReadOnlyList<string> updated = [];
                 AnsiConsole.Status()
                     .Start("Syncing skills from registry...", ctx =>
@@ -86,20 +88,29 @@ public static class SyncCommand
                         }
                     });
 
-                if (updated.Count == 0 && skippedOverwriteSkills.Count == 0)
-                    AnsiConsole.MarkupLine("[green]✓[/] All registry skills are up to date.");
+                var newVersions = ServiceFactory.Skills.ReadConfig(projectRoot).InstalledSkillVersions;
+                var changedSkills = updated
+                    .Where(name =>
+                    {
+                        var oldVer = oldVersions.TryGetValue(name, out var ov) ? ov : null;
+                        var newVer = newVersions.TryGetValue(name, out var nv) ? nv : null;
+                        return oldVer != newVer;
+                    })
+                    .ToList();
+
+                if (changedSkills.Count == 0 && skippedOverwriteSkills.Count == 0)
+                    AnsiConsole.MarkupLine("[green]✓[/] Registry up to date.");
                 else
                 {
-                    if (updated.Count > 0)
+                    if (changedSkills.Count > 0)
                     {
-                        AnsiConsole.MarkupLine("[green]✓[/] Registry pulled — [bold]{0}[/] skill(s) reflect latest content:", updated.Count);
-                        foreach (var name in updated)
+                        AnsiConsole.MarkupLine("[green]✓[/] Registry synced — [bold]{0}[/] skill(s) updated:", changedSkills.Count);
+                        foreach (var name in changedSkills)
                             AnsiConsole.MarkupLine("  • {0}", name);
-                        AnsiConsole.MarkupLine("[dim](Symlinked skills updated automatically via cache pull.)[/]");
                     }
                     else
                     {
-                        AnsiConsole.MarkupLine("[green]✓[/] Registry pulled.");
+                        AnsiConsole.MarkupLine("[green]✓[/] Registry up to date.");
                     }
                 }
 
@@ -140,8 +151,14 @@ public static class SyncCommand
                         syncedTaps = ServiceFactory.Taps.SyncAll(latestConfig);
                     });
 
-                AnsiConsole.MarkupLine(
-                    $"[green]✓[/] Taps synced: {string.Join(", ", syncedTaps.Select(Markup.Escape))}");
+                if (syncedTaps.Count == 0)
+                    AnsiConsole.MarkupLine("[green]✓[/] Taps up to date.");
+                else
+                {
+                    AnsiConsole.MarkupLine("[green]✓[/] Taps synced — [bold]{0}[/] updated:", syncedTaps.Count);
+                    foreach (var name in syncedTaps)
+                        AnsiConsole.MarkupLine("  • {0}", Markup.Escape(name));
+                }
 
                 // ── Restore missing tap skill symlinks ────────────────────────
                 // After a fresh clone the tap caches now exist but the gitignored
