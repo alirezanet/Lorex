@@ -130,12 +130,15 @@ public static class SyncCommand
                     var newTaps = recommended.Where(t => !configuredUrls.Contains(t.Url)).ToList();
                     if (newTaps.Count > 0)
                     {
-                        var tapList = string.Join(", ", newTaps.Select(t => Markup.Escape(t.Name)));
                         AnsiConsole.MarkupLine(
-                            "[blue]ℹ[/] This registry recommends {0} new tap source{1}: [bold]{2}[/]",
-                            newTaps.Count, newTaps.Count == 1 ? "" : "s", tapList);
+                            "[blue]ℹ[/] This registry recommends {0} new tap source{1}:",
+                            newTaps.Count, newTaps.Count == 1 ? "" : "s");
+                        foreach (var tap in newTaps)
+                            AnsiConsole.MarkupLine(
+                                "  [bold]lorex tap add {0} --name {1}[/]",
+                                Markup.Escape(tap.Url), Markup.Escape(tap.Name));
                         AnsiConsole.MarkupLine(
-                            "[dim]Run [bold]lorex tap add <url>[/] to add them, or [bold]lorex init[/] to configure interactively.[/]");
+                            "[dim]Or run [bold]lorex init[/] to configure interactively.[/]");
                     }
                 }
             }
