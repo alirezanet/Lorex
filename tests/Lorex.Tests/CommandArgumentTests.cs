@@ -431,6 +431,20 @@ public sealed class CommandArgumentTests
     }
 
     [Fact]
+    public void InstallCommand_HelpFlag_ReturnsZero()
+    {
+        Assert.Equal(0, InstallCommand.Run(["--help"]));
+        Assert.Equal(0, InstallCommand.Run(["-h"]));
+    }
+
+    [Fact]
+    public void UninstallCommand_HelpFlag_ReturnsZero()
+    {
+        Assert.Equal(0, UninstallCommand.Run(["--help"]));
+        Assert.Equal(0, UninstallCommand.Run(["-h"]));
+    }
+
+    [Fact]
     public void HelpPrinter_Print_DoesNotThrowWithMinimalArgs()
     {
         // Should not throw when only required args are provided
