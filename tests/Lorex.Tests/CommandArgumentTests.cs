@@ -431,6 +431,38 @@ public sealed class CommandArgumentTests
     }
 
     [Fact]
+    public void HelpPrinter_Print_DoesNotThrowWithMinimalArgs()
+    {
+        // Should not throw when only required args are provided
+        var result = HelpPrinter.Print("lorex test [args]", "Test description.");
+        Assert.Equal(0, result);
+    }
+
+    [Fact]
+    public void HelpPrinter_Print_DoesNotThrowWithAllSections()
+    {
+        var result = HelpPrinter.Print(
+            "lorex test [args]",
+            "First line.\nSecond line.",
+            options:
+            [
+                ("--flag", "A flag"),
+                ("-h, --help", "Show help"),
+            ],
+            examples:
+            [
+                ("With a comment", "lorex test --flag"),
+                ("", "lorex test"),
+            ],
+            subcommands:
+            [
+                ("sub <arg> [-g]", "A subcommand"),
+            ]
+        );
+        Assert.Equal(0, result);
+    }
+
+    [Fact]
     public void SkillService_RequiresOverwriteApproval_IsTrueForLocalDirectoryAndFalseForSymlink()
     {
         var projectRoot = Path.Combine(Path.GetTempPath(), $"lorex-test-{Guid.NewGuid():N}");
