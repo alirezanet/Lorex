@@ -431,6 +431,20 @@ public sealed class CommandArgumentTests
     }
 
     [Fact]
+    public void ListCommand_HelpFlag_ReturnsZero()
+    {
+        Assert.Equal(0, ListCommand.Run(["--help"]));
+        Assert.Equal(0, ListCommand.Run(["-h"]));
+    }
+
+    [Fact]
+    public void StatusCommand_HelpFlag_ReturnsZero()
+    {
+        Assert.Equal(0, StatusCommand.Run(["--help"]));
+        Assert.Equal(0, StatusCommand.Run(["-h"]));
+    }
+
+    [Fact]
     public void CreateCommand_HelpFlag_ReturnsZero()
     {
         Assert.Equal(0, CreateCommand.Run(["--help"]));
