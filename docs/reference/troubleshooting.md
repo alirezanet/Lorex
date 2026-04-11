@@ -8,13 +8,11 @@ If the skill still does not appear, check `lorex status` to confirm the skill is
 
 ---
 
-## Symlinks not working on Windows
+## Links not working on Windows
 
-Lorex requires symlink creation for registry installs and native skill projections.
+Lorex creates directory links for registry installs and native skill projections. When Windows Developer Mode is off and the process is not elevated, lorex falls back to **directory junctions**, which work on any Windows account without special permissions.
 
-**Fix:** Enable [Developer Mode](https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development) in Windows Settings, or run the terminal as Administrator.
-
-Lorex will detect this automatically and offer to open the Developer Mode settings page.
+If link creation still fails (for example, on a non-NTFS volume), enable [Developer Mode](https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development) in Windows Settings or run the terminal as Administrator to allow symlinks instead.
 
 ---
 

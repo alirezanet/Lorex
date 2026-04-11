@@ -283,15 +283,15 @@ internal sealed class LorexTestHarness : IDisposable
             ?? throw new InvalidOperationException($"Failed to deserialize registry policy from {manifestPath}");
     }
 
-    // ── Symlink availability ──────────────────────────────────────────────────
+    // ── Link availability ─────────────────────────────────────────────────────
 
     /// <summary>
-    /// Returns true when symlinks can be created in the current environment.
-    /// On Windows, requires Developer Mode or administrator elevation.
-    /// Tests that require symlinks should guard with: <c>if (!LorexTestHarness.SymlinksAvailable()) return;</c>
+    /// Returns true when directory links (symlinks or junctions) can be created in the current
+    /// environment. On Windows, directory junctions are always available without elevation, so
+    /// this always returns true. On other platforms, symlinks are always available.
+    /// Tests that were previously guarded by this check now run on all Windows machines.
     /// </summary>
-    public static bool SymlinksAvailable() =>
-        !OperatingSystem.IsWindows() || WindowsDevModeHelper.IsSymlinkAvailable();
+    public static bool SymlinksAvailable() => true;
 
     // ── Dispose ───────────────────────────────────────────────────────────────
 

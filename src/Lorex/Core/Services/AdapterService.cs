@@ -263,43 +263,25 @@ public sealed class AdapterService
             Directory.Delete(targetDir, recursive: true);
         }
 
-        if (!TryCreateDirectorySymlink(projectRoot, targetDir, sourceDir))
+        if (!TryCreateDirectoryLink(projectRoot, targetDir, sourceDir))
             throw new InvalidOperationException(
-                $"Lorex requires symlink support for native skill projections. Failed to create '{targetDir}'.");
+                $"Failed to create directory link for native skill projection at '{targetDir}'.");
     }
 
-    private static bool TryCreateDirectorySymlink(string projectRoot, string linkPath, string targetPath)
+    private static bool TryCreateDirectoryLink(string projectRoot, string linkPath, string targetPath)
     {
         try
         {
             Directory.CreateSymbolicLink(linkPath, GetSymlinkTarget(projectRoot, linkPath, targetPath));
             return true;
         }
-        catch (IOException)
-        {
-            return false;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
 
-    private static bool TryCreateFileSymlink(string projectRoot, string linkPath, string targetPath)
-    {
-        try
-        {
-            File.CreateSymbolicLink(linkPath, GetSymlinkTarget(projectRoot, linkPath, targetPath));
-            return true;
-        }
-        catch (IOException)
-        {
-            return false;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
+        // Fallback: directory junction (Windows only, no elevation required).
+        // Junctions require an absolute path — GetSymlinkTarget may return a relative path
+        // when link and target are both inside the project root, so we always use Path.GetFullPath.
+        return WindowsDevModeHelper.TryCreateJunction(linkPath, Path.GetFullPath(targetPath));
     }
 
     internal static bool IsLorexManagedProjection(string directoryPath, string lorexSkillsRoot)

@@ -28,9 +28,6 @@ public static class InstallCommand
 
         var isGlobal = WantsGlobal(args);
 
-        if (isGlobal && OperatingSystem.IsWindows() && !WindowsDevModeHelper.IsSymlinkAvailable())
-            WindowsDevModeHelper.EnsureSymlinkOrElevate();
-
         var projectRoot = isGlobal
             ? GlobalRootLocator.ResolveForExistingGlobal(homeRoot)
             : ProjectRootLocator.ResolveForExistingProject(cwd ?? Directory.GetCurrentDirectory());
@@ -198,11 +195,6 @@ public static class InstallCommand
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine("[red]Error:[/] {0}", Markup.Escape(ex.Message));
-            if (OperatingSystem.IsWindows() && !WindowsDevModeHelper.IsSymlinkAvailable())
-            {
-                WindowsDevModeHelper.PrintDevModeGuidance();
-                WindowsDevModeHelper.OfferToOpenSettings();
-            }
             return 1;
         }
     }

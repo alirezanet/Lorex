@@ -197,7 +197,7 @@ public sealed class SkillService(RegistryService registry)
         // Remove any existing link or directory at the target
         if (Directory.Exists(linkPath))
         {
-            if (!IsSymlink(linkPath) && !overwriteLocalSkill)
+            if (!IsLink(linkPath) && !overwriteLocalSkill)
             {
                 throw new InvalidOperationException(
                     $"Skill '{skillName}' already exists locally at '{linkPath}'. Overwrite requires direct user approval.");
@@ -206,10 +206,10 @@ public sealed class SkillService(RegistryService registry)
             Directory.Delete(linkPath, recursive: true);
         }
 
-        if (!TryCreateSymlink(linkPath, sourcePath))
+        if (!TryCreateLink(linkPath, sourcePath))
         {
             throw new InvalidOperationException(
-                "Lorex requires symlink support for installed registry skills. Enable symlinks and try again.");
+                $"Failed to create directory link for skill '{skillName}'.");
         }
 
         config = ReadConfig(projectRoot);
@@ -265,16 +265,16 @@ public sealed class SkillService(RegistryService registry)
                 if (Directory.Exists(linkPath))
                 {
                     var overwrite = shouldOverwrite?.Invoke(skillName) ?? false;
-                    if (!IsSymlink(linkPath) && !overwrite)
+                    if (!IsLink(linkPath) && !overwrite)
                         return; // skip — local skill, not approved for overwrite
 
                     Directory.Delete(linkPath, recursive: true);
                 }
 
-                if (!TryCreateSymlink(linkPath, sourcePath))
+                if (!TryCreateLink(linkPath, sourcePath))
                 {
                     throw new InvalidOperationException(
-                        "Lorex requires symlink support for installed registry skills. Enable symlinks and try again.");
+                        $"Failed to create directory link for skill '{skillName}'.");
                 }
 
                 installed.Add(skillName);
@@ -333,15 +333,15 @@ public sealed class SkillService(RegistryService registry)
 
         if (Directory.Exists(linkPath))
         {
-            if (!IsSymlink(linkPath) && !overwriteLocalSkill)
+            if (!IsLink(linkPath) && !overwriteLocalSkill)
                 throw new InvalidOperationException(
                     $"Skill '{skillName}' already exists locally at '{linkPath}'. Overwrite requires direct user approval.");
             Directory.Delete(linkPath, recursive: true);
         }
 
-        if (!TryCreateSymlink(linkPath, sourcePath))
+        if (!TryCreateLink(linkPath, sourcePath))
             throw new InvalidOperationException(
-                "Lorex requires symlink support for installed tap skills. Enable symlinks and try again.");
+                $"Failed to create directory link for skill '{skillName}'.");
 
         var config = ReadConfig(projectRoot);
         var versions = new Dictionary<string, string>(config.InstalledSkillVersions, StringComparer.OrdinalIgnoreCase);
@@ -385,14 +385,14 @@ public sealed class SkillService(RegistryService registry)
                 var linkPath = SkillDir(projectRoot, skillName);
                 if (Directory.Exists(linkPath))
                 {
-                    if (!IsSymlink(linkPath) && !(shouldOverwrite?.Invoke(skillName) ?? false))
+                    if (!IsLink(linkPath) && !(shouldOverwrite?.Invoke(skillName) ?? false))
                         continue;
                     Directory.Delete(linkPath, recursive: true);
                 }
 
-                if (!TryCreateSymlink(linkPath, sourcePath))
+                if (!TryCreateLink(linkPath, sourcePath))
                     throw new InvalidOperationException(
-                        "Lorex requires symlink support for installed tap skills. Enable symlinks and try again.");
+                        $"Failed to create directory link for skill '{skillName}'.");
 
                 installed.Add(skillName);
             }
@@ -525,7 +525,7 @@ public sealed class SkillService(RegistryService registry)
 
             if (Directory.Exists(destDir))
             {
-                if (IsSymlink(destDir))
+                if (IsLink(destDir))
                     Directory.Delete(destDir, recursive: true);
                 else
                     throw new InvalidOperationException(
@@ -617,7 +617,7 @@ public sealed class SkillService(RegistryService registry)
         {
             var linkPath = SkillDir(projectRoot, skillName);
 
-            if (IsSymlink(linkPath))
+            if (IsLink(linkPath))
             {
                 var target = new DirectoryInfo(linkPath).LinkTarget;
                 if (target is not null && Directory.Exists(target))
@@ -697,7 +697,7 @@ public sealed class SkillService(RegistryService registry)
             var linkPath = SkillDir(projectRoot, skillName);
 
             // Must be a broken symlink (directory exists as symlink but target is gone)
-            if (!IsSymlink(linkPath)) continue;
+            if (!IsLink(linkPath)) continue;
             var target = new DirectoryInfo(linkPath).LinkTarget;
             if (target is not null && Directory.Exists(target)) continue;
 
@@ -726,7 +726,7 @@ public sealed class SkillService(RegistryService registry)
         if (!Directory.Exists(localPath))
             throw new InvalidOperationException($"Skill '{skillName}' not found.");
 
-        if (IsSymlink(localPath))
+        if (IsLink(localPath))
         {
             // Registry-installed skill edited in place — changes live in the registry cache already.
             var cacheDir = registry.GetCachePath(config.Registry.Url);
@@ -735,7 +735,7 @@ public sealed class SkillService(RegistryService registry)
                     "Registry is not cached locally. Run `lorex sync` first.");
 
             // Resolve the real path inside the cache, which may be nested (skills/cat/name).
-            var resolvedTarget = ResolveSymlinkTarget(new DirectoryInfo(localPath));
+            var resolvedTarget = ResolveLinkTarget(new DirectoryInfo(localPath));
             var skillCacheRelPath = Path.GetRelativePath(cacheDir, resolvedTarget);
 
             return config.Registry.Policy.PublishMode switch
@@ -869,7 +869,7 @@ public sealed class SkillService(RegistryService registry)
             {
                 // Registry-installed skill — only publishable if the cache has uncommitted changes.
                 // Use GetRelativePath so nested registry layouts (skills/cat/name) are handled correctly.
-                var resolvedTarget = ResolveSymlinkTarget(info);
+                var resolvedTarget = ResolveLinkTarget(info);
                 var relativePath = Path.GetRelativePath(cacheDir, resolvedTarget);
                 if (relativePath.StartsWith("..", StringComparison.Ordinal)) continue; // not in this registry
 
@@ -897,7 +897,7 @@ public sealed class SkillService(RegistryService registry)
     public bool RequiresOverwriteApproval(string projectRoot, string skillName)
     {
         var path = SkillDir(projectRoot, skillName);
-        return Directory.Exists(path) && !IsSymlink(path);
+        return Directory.Exists(path) && !IsLink(path);
     }
 
     /// <summary>
@@ -1042,12 +1042,8 @@ public sealed class SkillService(RegistryService registry)
         Path.Combine(projectRoot, LorexDir, ConfigFile);
 
     /// <summary>
-    /// Attempts to create a directory symlink. Returns true on success, false if not permitted.
-    /// </summary>
-    /// <summary>
-    /// Rewrites <c>.lorex/skills/.gitignore</c> so every symlinked skill (registry or tap install)
+    /// Rewrites <c>.lorex/skills/.gitignore</c> so every linked skill (registry or tap install)
     /// is ignored by git, while real directories (local skills) remain trackable.
-    /// Also untracks any already-tracked symlinks via <c>git rm --cached</c> (best-effort).
     /// Safe to call after any install or uninstall operation.
     /// </summary>
     private static void RefreshSkillsGitIgnore(string projectRoot)
@@ -1056,7 +1052,7 @@ public sealed class SkillService(RegistryService registry)
         if (!Directory.Exists(skillsDir))
             return;
 
-        var symlinkNames = Directory.EnumerateDirectories(skillsDir)
+        var linkedSkillNames = Directory.EnumerateDirectories(skillsDir)
             .Where(d => new DirectoryInfo(d).LinkTarget is not null)
             .Select(d => Path.GetFileName(d)!)
             .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
@@ -1064,7 +1060,7 @@ public sealed class SkillService(RegistryService registry)
 
         var gitIgnorePath = Path.Combine(skillsDir, ".gitignore");
 
-        if (symlinkNames.Count == 0)
+        if (linkedSkillNames.Count == 0)
         {
             if (File.Exists(gitIgnorePath))
                 File.Delete(gitIgnorePath);
@@ -1073,46 +1069,51 @@ public sealed class SkillService(RegistryService registry)
 
         var lines = new List<string>
         {
-            "# Managed by lorex — symlinked skills (registry and tap installs).",
+            "# Managed by lorex — linked skills (registry and tap installs).",
             "# Local skills are real directories and are committed normally.",
             "",
             "# This file is self-ignoring.",
             ".gitignore",
             ""
         };
-        // No trailing slash: git stores symlinks as blob objects (mode 120000), not trees,
-        // so a trailing-slash pattern would never match them — regardless of platform or
-        // core.symlinks setting. A bare name matches both blobs and trees.
-        lines.AddRange(symlinkNames);
+        // No trailing slash: on platforms where symlinks are used, git stores them as blob
+        // objects (mode 120000), not trees, so a trailing-slash pattern would never match.
+        // On Windows without Developer Mode, junctions are used instead — git treats those
+        // as regular directories (trees). A bare name matches both blobs and trees.
+        lines.AddRange(linkedSkillNames);
 
         File.WriteAllText(gitIgnorePath, string.Join("\n", lines) + "\n");
     }
 
-    private static bool TryCreateSymlink(string linkPath, string targetPath)
+    /// <summary>
+    /// Creates a directory link at <paramref name="linkPath"/> pointing to <paramref name="targetPath"/>.
+    /// Tries a symlink first (requires Developer Mode or admin on Windows); if that fails, falls back
+    /// to a directory junction (works on any Windows account without elevation).
+    /// Returns true on success, false if neither mechanism is available.
+    /// </summary>
+    private static bool TryCreateLink(string linkPath, string targetPath)
     {
         try
         {
             Directory.CreateSymbolicLink(linkPath, targetPath);
             return true;
         }
-        catch (IOException)
-        {
-            return false;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+
+        // Fallback: directory junction (Windows only, no elevation required).
+        // The target path passed here is always the absolute registry/tap cache path.
+        return WindowsDevModeHelper.TryCreateJunction(linkPath, targetPath);
     }
 
-    private static bool IsSymlink(string path) =>
+    private static bool IsLink(string path) =>
         Directory.Exists(path) &&
         new DirectoryInfo(path).LinkTarget is not null;
 
     /// <summary>
     /// Resolves a directory symlink to its real absolute path, handling both absolute and relative link targets.
     /// </summary>
-    private static string ResolveSymlinkTarget(DirectoryInfo symlinkDir)
+    private static string ResolveLinkTarget(DirectoryInfo symlinkDir)
     {
         var target = symlinkDir.LinkTarget!;
         return Path.IsPathRooted(target) ? target : Path.GetFullPath(target, symlinkDir.Parent!.FullName);

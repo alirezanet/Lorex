@@ -1,11 +1,10 @@
 using System.Diagnostics;
-using Spectre.Console;
 
 namespace Lorex.Core.Services;
 
 /// <summary>
 /// Detects whether Windows Developer Mode is enabled (required for unprivileged symlink creation)
-/// and provides guidance to help the user enable it.
+/// and provides a junction fallback for environments where symlinks are unavailable.
 /// </summary>
 internal static class WindowsDevModeHelper
 {
@@ -27,86 +26,41 @@ internal static class WindowsDevModeHelper
     }
 
     /// <summary>
-    /// Ensures symlinks are available. If Developer Mode is not enabled, opens the
-    /// Windows Settings page directly and waits for the user to toggle it on.
-    /// Returns true when the caller should continue. Throws on user cancellation.
+    /// Creates a directory junction at <paramref name="linkPath"/> pointing to
+    /// <paramref name="targetPath"/>. Junctions require an absolute target path and
+    /// work on any Windows account without Developer Mode or administrator elevation.
+    /// Returns false on any failure.
     /// </summary>
-    public static bool EnsureSymlinkOrElevate()
+    public static bool TryCreateJunction(string linkPath, string targetPath)
     {
-        if (IsSymlinkAvailable())
-            return true;
+        if (!OperatingSystem.IsWindows()) return false;
 
-        if (!OperatingSystem.IsWindows())
-            return true;
+        // Junctions require an absolute target path.
+        var absoluteTarget = Path.GetFullPath(targetPath);
 
-        AnsiConsole.MarkupLine("[yellow bold]Symlinks require Windows Developer Mode.[/]");
-        AnsiConsole.MarkupLine("[dim]Opening the Settings page — toggle [bold]Developer Mode[/] on, then come back here.[/]");
-        AnsiConsole.WriteLine();
+        // Strip any trailing separator — "path\" confuses cmd.exe argument parsing.
+        absoluteTarget = absoluteTarget.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        // mklink is a cmd.exe built-in, not a standalone executable.
+        var psi = new ProcessStartInfo("cmd.exe",
+            $"/c mklink /J \"{linkPath}\" \"{absoluteTarget}\"")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError  = true,
+            UseShellExecute        = false,
+            CreateNoWindow         = true,
+        };
 
         try
         {
-            Process.Start(new ProcessStartInfo("ms-settings:developers") { UseShellExecute = true });
+            using var proc = Process.Start(psi);
+            if (proc is null) return false;
+            proc.WaitForExit();
+            return proc.ExitCode == 0 && Directory.Exists(linkPath);
         }
         catch
         {
-            AnsiConsole.MarkupLine("[red]Could not open Settings automatically.[/]");
-            AnsiConsole.MarkupLine("[dim]Open [bold]Settings → System → For developers[/] and enable Developer Mode manually.[/]");
-        }
-
-        AnsiConsole.MarkupLine("[dim]Press [bold]Enter[/] once Developer Mode is enabled…[/]");
-        Console.ReadLine();
-
-        // Clear the cached check so we re-probe.
-        _cached = null;
-
-        if (!IsSymlinkAvailable())
-        {
-            AnsiConsole.MarkupLine("[red]Developer Mode is still not detected.[/]");
-            AnsiConsole.MarkupLine("[dim]Make sure the toggle is on, then try again.[/]");
-            throw new OperationCanceledException("Symlinks are required. Enable Developer Mode and re-run the command.");
-        }
-
-        AnsiConsole.MarkupLine("[green]✓[/] Developer Mode detected — continuing.");
-        return true;
-    }
-
-    /// <summary>
-    /// Prints a formatted message explaining that Developer Mode is off,
-    /// with step-by-step instructions to enable it manually.
-    /// </summary>
-    public static void PrintDevModeGuidance()
-    {
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[yellow bold]Symlinks require Windows Developer Mode[/]");
-        AnsiConsole.MarkupLine("[dim]Without Developer Mode, lorex cannot create symlinks for shared skills.[/]");
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[bold]To enable Developer Mode:[/]");
-        AnsiConsole.MarkupLine("  1. Open [bold]Settings[/] → [bold]System[/] → [bold]For developers[/]");
-        AnsiConsole.MarkupLine("  2. Toggle [bold]Developer Mode[/] on");
-        AnsiConsole.MarkupLine("  3. Re-run the lorex command");
-        AnsiConsole.WriteLine();
-    }
-
-    /// <summary>
-    /// Asks the user (interactively) whether to open the Developer Mode settings page.
-    /// Safe to call during an install flow.
-    /// </summary>
-    public static void OfferToOpenSettings()
-    {
-        var open = AnsiConsole.Confirm("[dim]Open Developer Mode settings now?[/]", defaultValue: false);
-        if (!open) return;
-
-        try
-        {
-            Process.Start(new ProcessStartInfo("ms-settings:developers")
-            {
-                UseShellExecute = true
-            });
-            AnsiConsole.MarkupLine("[dim]Settings page opened. Enable Developer Mode, then re-run the command.[/]");
-        }
-        catch
-        {
-            AnsiConsole.MarkupLine("[dim]Could not open Settings automatically. Navigate there manually.[/]");
+            return false;
         }
     }
 

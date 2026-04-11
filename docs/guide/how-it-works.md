@@ -26,7 +26,7 @@ When you run `lorex refresh` (or any command that installs or syncs skills), Lor
 
 ### Skill-directory adapters
 
-For agents with native skill folders, Lorex creates **directory symlinks** back to `.lorex/skills`:
+For agents with native skill folders, Lorex creates **directory links** back to `.lorex/skills`:
 
 ```
 .claude/skills/auth-logic        →  .lorex/skills/auth-logic
@@ -37,7 +37,9 @@ For agents with native skill folders, Lorex creates **directory symlinks** back 
 .opencode/skills/auth-logic      →  .lorex/skills/auth-logic
 ```
 
-Each agent reads the skill directly from the symlink. There is only one copy of the content.
+Each agent reads the skill directly from the link. There is only one copy of the content.
+
+On Windows with Developer Mode or administrator elevation, lorex uses symlinks. On standard Windows accounts without those privileges, lorex falls back to directory junctions, which work without any special permissions. The behavior is identical from the agent's perspective.
 
 ### Rules-file adapters
 

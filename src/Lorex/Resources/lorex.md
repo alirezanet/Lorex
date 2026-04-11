@@ -89,7 +89,7 @@ lorex tap list --global
 lorex tap sync --global
 ```
 
-Tap caches live at `~/.lorex/taps/<slug>/` and are shared across all projects on the machine. Skills installed from taps are symlinked (like registry skills) so `lorex sync` keeps them current automatically.
+Tap caches live at `~/.lorex/taps/<slug>/` and are shared across all projects on the machine. Skills installed from taps are linked (like registry skills) so `lorex sync` keeps them current automatically.
 
 If a registry install or sync would replace an existing local skill directory in `.lorex/skills`, lorex asks for explicit approval per skill before overwriting it.
 
@@ -172,7 +172,7 @@ Field notes:
       docs/
 ```
 
-Registry-backed skills are symlinked into `.lorex/skills`. Lorex requires symlink support for registry installs and native skill projections.
+Registry-backed skills are linked into `.lorex/skills`. On Windows, lorex uses symlinks when Developer Mode is enabled, and falls back to directory junctions otherwise — no special permissions required.
 
 The agent-specific projection folders are derived outputs. The canonical state to commit is `.lorex/lorex.json` plus `.lorex/skills/`; generated adapter folders should usually be gitignored.
 
@@ -224,6 +224,6 @@ After install, the project layout is always flat (`.lorex/skills/auth-logic/`, e
 | `lorex registry` opens a branch instead of changing the policy immediately | The current registry policy is `pull-request`; merge the generated PR branch, then run `lorex sync` |
 | Old `AGENTS.md` / `CLAUDE.md` files still exist | Lorex removes its legacy managed block during refresh; delete the file if it is now empty |
 | `lorex install --global` fails with "not initialised" | Run `lorex init --global` first |
-| Symlinks not working on Windows | Enable Developer Mode or otherwise allow symlink creation; lorex requires symlinks for registry installs and native skill projections |
+| Links not working on Windows | Lorex falls back to directory junctions automatically — no special permissions needed. If junctions also fail (rare, e.g. non-NTFS), enable Developer Mode or run as Administrator |
 | Gemini not loading lorex skills | Confirm `.gemini/settings.json` exists and `context.loadFromIncludeDirectories` is `true` |
 | Published skill still shows as local | Run `lorex status`; registry-backed installs should show as `symlink` when available |

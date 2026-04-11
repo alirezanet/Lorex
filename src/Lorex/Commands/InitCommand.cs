@@ -28,9 +28,6 @@ public static class InitCommand
         var isGlobal = args.Any(a => string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase) ||
                                      string.Equals(a, "-g",       StringComparison.OrdinalIgnoreCase));
 
-        if (isGlobal && OperatingSystem.IsWindows() && !WindowsDevModeHelper.IsSymlinkAvailable())
-            WindowsDevModeHelper.EnsureSymlinkOrElevate();
-
         var projectRoot = isGlobal
             ? (homeRoot ?? GlobalRootLocator.GetGlobalRoot())
             : ProjectRootLocator.ResolveForInit(cwd ?? Directory.GetCurrentDirectory());

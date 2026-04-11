@@ -19,9 +19,6 @@ public static class SyncCommand
             string.Equals(a, GlobalFlag, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(a, "-g",       StringComparison.OrdinalIgnoreCase));
 
-        if (isGlobal && OperatingSystem.IsWindows() && !WindowsDevModeHelper.IsSymlinkAvailable())
-            WindowsDevModeHelper.EnsureSymlinkOrElevate();
-
         var projectRoot = isGlobal
             ? GlobalRootLocator.ResolveForExistingGlobal(homeRoot)
             : ProjectRootLocator.ResolveForExistingProject(cwd ?? Directory.GetCurrentDirectory());
