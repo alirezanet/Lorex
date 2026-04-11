@@ -184,8 +184,8 @@ After a fresh clone, a teammate runs `lorex init` and Lorex re-creates all proje
 
 ---
 
-## Requiring symlink support
+## Directory link support
 
-All symlink-based adapters — and registry installs — require symlink creation to work. On Linux and macOS this works out of the box. On Windows, enable [Developer Mode](https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development).
+All link-based adapters — and registry installs — require directory link creation to work. On Linux and macOS symlinks are always available. On Windows, lorex uses symlinks when Developer Mode is enabled or the process is elevated, and falls back to directory junctions otherwise. Junctions work on any standard Windows account without special permissions.
 
-If Lorex cannot create a symlink it prints an error and, on Windows, offers to open the Developer Mode settings page.
+If link creation fails on Windows (for example, on a non-NTFS volume), enable [Developer Mode](https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development) or run as Administrator.

@@ -203,11 +203,11 @@ When a teammate clones the project they run `lorex init` once, which re-creates 
 
 ---
 
-## Windows: enabling symlinks
+## Windows: directory links
 
-Lorex creates directory symlinks to project skills into agent locations. On Windows this requires either:
+Lorex creates directory links to project skills into agent locations. On Windows it picks the best available mechanism automatically:
 
-- **Developer Mode** — go to Settings → System → For Developers and turn on Developer Mode (recommended)
-- **Running as Administrator** — works but is not required if Developer Mode is on
+- **Symlinks** — used when Developer Mode is on or the process is running as Administrator
+- **Directory junctions** — used otherwise; work on any standard Windows account with no special permissions required
 
-If Lorex detects that symlinks are unavailable it will print a warning and offer to open the Developer Mode settings page for you.
+No configuration is needed. Lorex selects the right mechanism silently and behavior is identical either way.
