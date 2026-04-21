@@ -23,6 +23,12 @@ internal static class SkillFileConvention
         return File.Exists(legacy) ? legacy : null;
     }
 
+    /// <summary>Extracts the repository name (last path segment) from a repo URL.</summary>
+    internal static string RepoNameFromUrl(string repoUrl) =>
+        Path.GetFileNameWithoutExtension(
+            repoUrl.TrimEnd('/').Split('/').Last()
+        ) is { Length: > 0 } name ? name : "skill";
+
     internal static string ExtractBody(string markdown)
     {
         var yaml = SimpleYamlParser.ExtractFrontmatterYaml(markdown);

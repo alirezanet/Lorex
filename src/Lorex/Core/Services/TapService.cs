@@ -171,6 +171,15 @@ public sealed class TapService(GitService git)
         var searchRoot = ResolveSkillsRoot(cachePath, tap.Root);
         if (!Directory.Exists(searchRoot)) return null;
 
+        // Root-level skill: the repo itself contains SKILL.md directly
+        if (SkillFileConvention.ResolveEntryPath(searchRoot) is not null)
+        {
+            var resolvedName = ReadSkillName(searchRoot) ?? SkillFileConvention.RepoNameFromUrl(tap.Url);
+            return string.Equals(resolvedName, skillName, StringComparison.OrdinalIgnoreCase)
+                ? searchRoot
+                : null;
+        }
+
         foreach (var dir in RegistryService.EnumerateSkillDirectories(searchRoot))
         {
             if (string.Equals(Path.GetFileName(dir), skillName, StringComparison.OrdinalIgnoreCase))
@@ -226,6 +235,18 @@ public sealed class TapService(GitService git)
 
         var results = new List<SkillMetadata>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Root-level skill: the repo itself contains SKILL.md directly
+        if (SkillFileConvention.ResolveEntryPath(searchRoot) is { } rootEntry)
+        {
+            try
+            {
+                var meta = SimpleYamlParser.ParseSkillMetadataFromMarkdown(File.ReadAllText(rootEntry));
+                if (seen.Add(meta.Name)) results.Add(meta);
+            }
+            catch (InvalidDataException) { }
+            return results;
+        }
 
         foreach (var dir in RegistryService.EnumerateSkillDirectories(searchRoot))
         {

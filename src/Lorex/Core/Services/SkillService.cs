@@ -483,9 +483,7 @@ public sealed class SkillService(RegistryService registry)
                         $"No SKILL.md found at '{skillPath}' in repository '{repoUrl}'.");
 
                 var meta = SimpleYamlParser.ParseSkillMetadataFromMarkdown(File.ReadAllText(entryPath));
-                skillName = string.IsNullOrWhiteSpace(meta.Name)
-                    ? Path.GetFileName(skillSourceDir)
-                    : meta.Name;
+                skillName = meta.Name;
             }
             else
             {
@@ -494,29 +492,37 @@ public sealed class SkillService(RegistryService registry)
                     ? Path.Combine(tempDir, "skills")
                     : tempDir;
 
-                var discovered = RegistryService.EnumerateSkillDirectories(searchRoot).ToList();
-
-                if (discovered.Count == 0)
-                    throw new InvalidOperationException(
-                        $"No skills found in '{repoUrl}'. " +
-                        $"Specify a skill path (e.g. {url}/tree/main/skill-name) " +
-                        $"or use 'lorex tap add' to browse all skills in the repository.");
-
-                if (discovered.Count > 1)
+                // Root-level skill: the repo itself contains SKILL.md directly
+                if (SkillFileConvention.ResolveEntryPath(searchRoot) is { } rootEntry)
                 {
-                    var names = discovered.Select(d => Path.GetFileName(d) ?? d);
-                    throw new InvalidOperationException(
-                        $"Multiple skills found in '{repoUrl}': {string.Join(", ", names)}. " +
-                        $"Specify one: lorex install {url}/tree/main/<skill-name>, " +
-                        $"or use 'lorex tap add' to browse all.");
+                    skillSourceDir = searchRoot;
+                    var meta = SimpleYamlParser.ParseSkillMetadataFromMarkdown(File.ReadAllText(rootEntry));
+                    skillName = meta.Name;
                 }
+                else
+                {
+                    var discovered = RegistryService.EnumerateSkillDirectories(searchRoot).ToList();
 
-                skillSourceDir = discovered[0];
-                var ep = SkillFileConvention.ResolveEntryPath(skillSourceDir)!;
-                var meta = SimpleYamlParser.ParseSkillMetadataFromMarkdown(File.ReadAllText(ep));
-                skillName = string.IsNullOrWhiteSpace(meta.Name)
-                    ? Path.GetFileName(skillSourceDir) ?? "skill"
-                    : meta.Name;
+                    if (discovered.Count == 0)
+                        throw new InvalidOperationException(
+                            $"No skills found in '{repoUrl}'. " +
+                            $"Specify a skill path (e.g. {url}/tree/main/skill-name) " +
+                            $"or use 'lorex tap add' to browse all skills in the repository.");
+
+                    if (discovered.Count > 1)
+                    {
+                        var names = discovered.Select(d => Path.GetFileName(d) ?? d);
+                        throw new InvalidOperationException(
+                            $"Multiple skills found in '{repoUrl}': {string.Join(", ", names)}. " +
+                            $"Specify one: lorex install {url}/tree/main/<skill-name>, " +
+                            $"or use 'lorex tap add' to browse all.");
+                    }
+
+                    skillSourceDir = discovered[0];
+                    var ep = SkillFileConvention.ResolveEntryPath(skillSourceDir)!;
+                    var meta = SimpleYamlParser.ParseSkillMetadataFromMarkdown(File.ReadAllText(ep));
+                    skillName = meta.Name;
+                }
             }
 
             // Copy skill files to .lorex/skills/<name>/

@@ -3,6 +3,20 @@ using Lorex.Core.Services;
 
 namespace Lorex.Tests;
 
+public sealed class SkillFileConventionTests
+{
+    [Theory]
+    [InlineData("https://github.com/owner/my-skill", "my-skill")]
+    [InlineData("https://github.com/owner/my-skill.git", "my-skill")]
+    [InlineData("https://github.com/owner/my-skill/", "my-skill")]
+    [InlineData("https://github.com/owner/my-skill.git/", "my-skill")]
+    [InlineData("https://github.com/owner/repo", "repo")]
+    [InlineData("", "skill")]
+    [InlineData("/", "skill")]
+    public void RepoNameFromUrl_ExtractsLastSegment(string url, string expected) =>
+        Assert.Equal(expected, SkillFileConvention.RepoNameFromUrl(url));
+}
+
 public sealed class SkillServiceTests
 {
     [Fact]
